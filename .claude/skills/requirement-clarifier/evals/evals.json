@@ -1,0 +1,23 @@
+{
+  "skill_name": "requirement-clarifier",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have this vague idea for an app that helps people track their plants' watering schedules, but I'm not sure what features it should have or how to turn it into a real product spec.",
+      "expected_output": "The model should ask clarifying questions covering background/motivation, target users, core features, scope, non-functional requirements, priorities, and acceptance criteria before producing a PRD.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我想做一个帮助自由职业者管理发票的工具。主要用户是个体户和小工作室。核心功能要有创建发票、发送给客户、标记付款状态。手机和网页都要能用。must-have 是发票的增删改查和导出 PDF。希望一周内完成 MVP。",
+      "expected_output": "The model should either ask a few focused follow-up questions (scope boundaries, non-functional constraints like security/compliance, success criteria) or, if confident, produce a structured PRD in Chinese with the required sections.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Write a PRD for a server uptime dashboard. Target users are DevOps engineers. It should show real-time status, alert history, and SLA metrics. Must integrate with PagerDuty. Needs to handle 1000 checks per second. Out of scope: actual alert sending. Must-have: real-time dashboard and alert history. Nice-to-have: SLA forecasting. Success criteria: 99.99% uptime on the dashboard itself and sub-200ms page load.",
+      "expected_output": "The model should produce a complete, well-structured PRD in English with Background, Scope, Core Features, Non-Functional Requirements, Prioritization, and Acceptance Criteria sections.",
+      "files": []
+    }
+  ]
+}
