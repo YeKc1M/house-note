@@ -3,7 +3,6 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:house_note/data/database.dart';
 import 'package:house_note/data/instance_repository.dart';
-import 'package:house_note/data/tables.dart';
 
 void main() {
   late AppDatabase db;
