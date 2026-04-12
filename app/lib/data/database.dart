@@ -22,11 +22,6 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(
-      name: 'house_note_db',
-      native: const DriftNativeOptions(
-        databaseDirectory: getApplicationSupportDirectory,
-      ),
-    );
+    return driftDatabase(name: 'house_note_db');
   }
 }
