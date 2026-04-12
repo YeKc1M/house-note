@@ -13,7 +13,7 @@ class Templates extends Table {
 class TemplateDimensions extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text().references(Templates, #id, onDelete: KeyAction.cascade)();
-  TextColumn get parentId => text().nullable()();
+  TextColumn get parentId => text().nullable().references(TemplateDimensions, #id)();
   TextColumn get name => text()();
   TextColumn get type => text()();
   TextColumn get config => text().withDefault(const Constant('{}'))();
@@ -26,7 +26,7 @@ class TemplateDimensions extends Table {
 class Instances extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text().references(Templates, #id, onDelete: KeyAction.cascade)();
-  TextColumn get parentInstanceId => text().nullable()();
+  TextColumn get parentInstanceId => text().nullable().references(Instances, #id)();
   TextColumn get name => text()();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
