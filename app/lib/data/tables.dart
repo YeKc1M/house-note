@@ -16,7 +16,7 @@ class TemplateDimensions extends Table {
   TextColumn get parentId => text().nullable().references(TemplateDimensions, #id)();
   TextColumn get name => text()();
   TextColumn get type => text()();
-  TextColumn get config => text().withDefault(const Constant('{}'))();
+  TextColumn get config => text()();
   IntColumn get sortOrder => integer()();
 
   @override
@@ -25,7 +25,7 @@ class TemplateDimensions extends Table {
 
 class Instances extends Table {
   TextColumn get id => text()();
-  TextColumn get templateId => text().references(Templates, #id, onDelete: KeyAction.cascade)();
+  TextColumn get templateId => text().references(Templates, #id)();
   TextColumn get parentInstanceId => text().nullable().references(Instances, #id)();
   TextColumn get name => text()();
   IntColumn get createdAt => integer()();
