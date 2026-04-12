@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/database.dart';
-import '../../data/tables.dart';
 import '../../data/template_repository.dart';
 import '../../models/dimension_node.dart';
 import 'state.dart';
@@ -10,10 +9,10 @@ import 'state.dart';
 export 'state.dart';
 
 class TemplateEditorCubit extends Cubit<TemplateEditorState> {
-  final TemplateRepository? _repo;
+  final TemplateRepository _repo;
   String? _templateId;
 
-  TemplateEditorCubit([this._repo]) : super(const TemplateEditorState());
+  TemplateEditorCubit(this._repo) : super(const TemplateEditorState());
 
   void setTemplateName(String name) {
     emit(state.copyWith(templateName: name));
@@ -49,21 +48,24 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
     if (oldIndex < 0 || oldIndex >= flat.length) return;
     final moved = flat[oldIndex];
     final removed = _removeFromTree(state.dimensions, moved.id);
+
     if (targetParentId != null) {
+      final targetNode = removed.expand((n) => n.flatten()).map((f) => f.node).firstWhere((n) => n.id == targetParentId);
+      final actualIndex = newIndex.clamp(0, targetNode.children.length);
       final updated = moved.copyWith(parentId: targetParentId);
-      emit(state.copyWith(dimensions: _insertIntoParent(removed, targetParentId, updated)));
+      final newTree = _insertIntoParentAtIndex(removed, targetParentId, actualIndex, updated);
+      emit(state.copyWith(dimensions: newTree));
     } else {
-      final targetNode = newIndex < flat.length ? flat[newIndex] : null;
-      final updated = targetNode != null
-          ? moved.copyWith(parentId: targetNode.parentId)
-          : moved.copyWith(parentId: null);
-      emit(state.copyWith(dimensions: _insertAtRoot(removed, newIndex, updated)));
+      final actualIndex = newIndex.clamp(0, removed.length);
+      final updated = moved.copyWith(parentId: null);
+      final list = removed.toList();
+      list.insert(actualIndex, updated);
+      emit(state.copyWith(dimensions: list));
     }
   }
 
   Future<void> loadTemplate(String id) async {
-    if (_repo == null) return;
-    final data = await _repo!.getTemplateById(id);
+    final data = await _repo.getTemplateById(id);
     if (data == null) return;
     _templateId = id;
     emit(state.copyWith(
@@ -73,7 +75,6 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
   }
 
   Future<void> saveTemplate() async {
-    if (_repo == null) return;
     final id = _templateId ?? const Uuid().v4();
     final now = DateTime.now().millisecondsSinceEpoch;
     final template = _templateId != null
@@ -89,22 +90,26 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
             updatedAt: now,
           );
     final flat = _flatten(state.dimensions);
-    final companions = flat.asMap().entries.map((e) {
-      final d = e.value;
-      return TemplateDimensionsCompanion.insert(
+    final parentCounters = <String?, int>{};
+    final companions = <TemplateDimensionsCompanion>[];
+    for (final d in flat) {
+      final parentId = d.parentId;
+      final sortOrder = parentCounters[parentId] ?? 0;
+      parentCounters[parentId] = sortOrder + 1;
+      companions.add(TemplateDimensionsCompanion.insert(
         id: d.id,
         templateId: id,
-        parentId: d.parentId == null ? const Value.absent() : Value(d.parentId!),
+        parentId: parentId == null ? const Value.absent() : Value(parentId),
         name: d.name,
         type: d.type,
         config: d.config,
-        sortOrder: e.key,
-      );
-    }).toList();
+        sortOrder: sortOrder,
+      ));
+    }
     if (_templateId != null) {
-      await _repo!.updateTemplate(template, companions);
+      await _repo.updateTemplate(template, companions);
     } else {
-      await _repo!.insertTemplate(template, companions);
+      await _repo.insertTemplate(template, companions);
       _templateId = id;
     }
   }
@@ -157,6 +162,19 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
     }).toList();
   }
 
+  List<DimensionNode> _insertIntoParentAtIndex(List<DimensionNode> nodes, String parentId, int index, DimensionNode child) {
+    return nodes.map((n) {
+      if (n.id == parentId) {
+        final children = n.children.toList();
+        children.insert(index.clamp(0, children.length), child);
+        return n.copyWith(children: children);
+      } else if (n.children.isNotEmpty) {
+        return n.copyWith(children: _insertIntoParentAtIndex(n.children, parentId, index, child));
+      }
+      return n;
+    }).toList();
+  }
+
   List<DimensionNode> _updateInTree(List<DimensionNode> nodes, String id, {String? name, String? type, String? config}) {
     return nodes.map((n) {
       if (n.id == id) {
@@ -175,15 +193,5 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
       }
       return n;
     }).toList();
-  }
-
-  List<DimensionNode> _insertAtRoot(List<DimensionNode> nodes, int index, DimensionNode item) {
-    final list = nodes.toList();
-    if (index >= list.length) {
-      list.add(item);
-    } else {
-      list.insert(index, item);
-    }
-    return list;
   }
 }
