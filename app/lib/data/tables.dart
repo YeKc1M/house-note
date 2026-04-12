@@ -17,7 +17,7 @@ class TemplateDimensions extends Table {
   TextColumn get name => text()();
   TextColumn get type => text()();
   TextColumn get config => text().withDefault(const Constant('{}'))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get sortOrder => integer()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -38,8 +38,8 @@ class Instances extends Table {
 class InstanceValues extends Table {
   TextColumn get id => text()();
   TextColumn get instanceId => text().references(Instances, #id, onDelete: KeyAction.cascade)();
-  TextColumn get dimensionId => text().references(TemplateDimensions, #id, onDelete: KeyAction.cascade)();
-  TextColumn get value => text().withDefault(const Constant(''))();
+  TextColumn get dimensionId => text().references(TemplateDimensions, #id)();
+  TextColumn get value => text()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -55,8 +55,8 @@ class InstanceCustomFields extends Table {
   TextColumn get instanceId => text().references(Instances, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text()();
   TextColumn get type => text()();
-  TextColumn get value => text().withDefault(const Constant(''))();
-  TextColumn get config => text().withDefault(const Constant('{}'))();
+  TextColumn get value => text()();
+  TextColumn get config => text()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -65,7 +65,7 @@ class InstanceCustomFields extends Table {
 class InstanceHiddenDimensions extends Table {
   TextColumn get id => text()();
   TextColumn get instanceId => text().references(Instances, #id, onDelete: KeyAction.cascade)();
-  TextColumn get dimensionId => text().references(TemplateDimensions, #id, onDelete: KeyAction.cascade)();
+  TextColumn get dimensionId => text().references(TemplateDimensions, #id)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -79,8 +79,8 @@ class InstanceHiddenDimensions extends Table {
 class TemplateThumbnailFields extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text().references(Templates, #id, onDelete: KeyAction.cascade)();
-  TextColumn get dimensionId => text().references(TemplateDimensions, #id, onDelete: KeyAction.cascade)();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get dimensionId => text().references(TemplateDimensions, #id)();
+  IntColumn get sortOrder => integer()();
 
   @override
   Set<Column> get primaryKey => {id};
