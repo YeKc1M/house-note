@@ -65,9 +65,11 @@ class TemplateRepository {
   }
 
   Future<int> countInstancesForTemplate(String templateId) async {
-    final query = _db.select(_db.instances)
-      ..where((i) => i.templateId.equals(templateId));
-    return query.get().then((rows) => rows.length);
+    final countExp = _db.instances.templateId.count();
+    final query = _db.selectOnly(_db.instances)..addColumns([countExp]);
+    query.where(_db.instances.templateId.equals(templateId));
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
   }
 
   Future<List<TemplateThumbnailField>> getThumbnailFields(String templateId) async {
