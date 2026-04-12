@@ -1,10 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-class FlattenedDimension {
+class FlattenedDimension extends Equatable {
   final DimensionNode node;
   final int depth;
 
   const FlattenedDimension(this.node, this.depth);
+
+  @override
+  List<Object?> get props => [node, depth];
 }
 
 class DimensionNode extends Equatable {
@@ -16,6 +19,8 @@ class DimensionNode extends Equatable {
   final String config;
   final int sortOrder;
   final List<DimensionNode> children;
+
+  static const _sentinel = Object();
 
   const DimensionNode({
     required this.id,
@@ -31,7 +36,7 @@ class DimensionNode extends Equatable {
   DimensionNode copyWith({
     String? id,
     String? templateId,
-    String? parentId,
+    Object? parentId = _sentinel,
     String? name,
     String? type,
     String? config,
@@ -41,7 +46,7 @@ class DimensionNode extends Equatable {
     return DimensionNode(
       id: id ?? this.id,
       templateId: templateId ?? this.templateId,
-      parentId: parentId ?? this.parentId,
+      parentId: parentId == _sentinel ? this.parentId : parentId as String?,
       name: name ?? this.name,
       type: type ?? this.type,
       config: config ?? this.config,
