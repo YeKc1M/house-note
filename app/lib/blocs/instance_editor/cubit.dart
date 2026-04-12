@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../data/instance_repository.dart';
 import '../../data/template_repository.dart';
 import '../../models/dimension_node.dart';
+import '../../utils/dimension_tree_builder.dart';
 import 'state.dart';
 
 export 'state.dart';
@@ -60,7 +61,7 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
     if (_templateRepo == null) return;
     final template = await _templateRepo!.getTemplateById(templateId);
     if (template == null) return;
-    final tree = _buildTree(template.dimensions);
+    final tree = buildDimensionTree(template.dimensions);
     emit(InstanceEditorState(
       templateId: templateId,
       parentInstanceId: parentInstanceId,
@@ -76,7 +77,7 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
     final data = await _instanceRepo!.getInstanceById(instanceId);
     if (data == null) return;
     final template = await _templateRepo!.getTemplateById(data.instance.templateId);
-    final tree = template != null ? _buildTree(template.dimensions) : <DimensionNode>[];
+    final tree = template != null ? buildDimensionTree(template.dimensions) : <DimensionNode>[];
     final values = {for (final v in data.values) v.dimensionId: v.value};
     final hidden = data.hiddenDimensions.map((h) => h.dimensionId).toSet();
     final custom = data.customFields.map((f) => CustomFieldData(
@@ -99,19 +100,29 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
   }
 
   Future<void> saveInstance() async {
-    if (_instanceRepo == null) return;
+    if (_instanceRepo == null || state.templateId == null) return;
     final id = _instanceId ?? const Uuid().v4();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final instance = InstancesCompanion(
-      id: Value(id),
-      templateId: Value(state.templateId!),
-      parentInstanceId: state.parentInstanceId == null
-          ? const Value.absent()
-          : Value(state.parentInstanceId!),
-      name: Value(state.name),
-      createdAt: _instanceId != null ? const Value.absent() : Value(now),
-      updatedAt: Value(now),
-    );
+    final instance = _instanceId != null
+        ? InstancesCompanion(
+            id: Value(id),
+            templateId: Value(state.templateId!),
+            parentInstanceId: state.parentInstanceId == null
+                ? const Value.absent()
+                : Value(state.parentInstanceId!),
+            name: Value(state.name),
+            updatedAt: Value(now),
+          )
+        : InstancesCompanion.insert(
+            id: id,
+            templateId: state.templateId!,
+            parentInstanceId: state.parentInstanceId == null
+                ? const Value.absent()
+                : Value(state.parentInstanceId),
+            name: state.name,
+            createdAt: now,
+            updatedAt: now,
+          );
     final values = state.dimensionValues.entries.map((e) {
       return InstanceValuesCompanion(
         id: Value(const Uuid().v4()),
@@ -156,31 +167,4 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
     }
   }
 
-  List<DimensionNode> _buildTree(List<TemplateDimension> dimensions) {
-    final map = <String, DimensionNode>{};
-    final roots = <DimensionNode>[];
-    for (final d in dimensions) {
-      map[d.id] = DimensionNode(
-        id: d.id,
-        templateId: d.templateId,
-        parentId: d.parentId,
-        name: d.name,
-        type: d.type,
-        config: d.config,
-        sortOrder: d.sortOrder,
-      );
-    }
-    for (final d in dimensions) {
-      final node = map[d.id]!;
-      if (d.parentId == null) {
-        roots.add(node);
-      } else {
-        final parent = map[d.parentId];
-        if (parent != null) {
-          map[d.parentId!] = parent.copyWith(children: [...parent.children, node]);
-        }
-      }
-    }
-    return roots;
-  }
 }

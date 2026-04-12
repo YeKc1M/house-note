@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../data/database.dart';
 import '../../data/template_repository.dart';
 import '../../models/dimension_node.dart';
+import '../../utils/dimension_tree_builder.dart';
 import 'state.dart';
 
 export 'state.dart';
@@ -70,7 +71,7 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
     _templateId = id;
     emit(state.copyWith(
       templateName: data.template.name,
-      dimensions: _buildTree(data.dimensions),
+      dimensions: buildDimensionTree(data.dimensions),
     ));
   }
 
@@ -112,34 +113,6 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
       await _repo.insertTemplate(template, companions);
       _templateId = id;
     }
-  }
-
-  List<DimensionNode> _buildTree(List<TemplateDimension> dimensions) {
-    final map = <String, DimensionNode>{};
-    final roots = <DimensionNode>[];
-    for (final d in dimensions) {
-      map[d.id] = DimensionNode(
-        id: d.id,
-        templateId: d.templateId,
-        parentId: d.parentId,
-        name: d.name,
-        type: d.type,
-        config: d.config,
-        sortOrder: d.sortOrder,
-      );
-    }
-    for (final d in dimensions) {
-      final node = map[d.id]!;
-      if (d.parentId == null) {
-        roots.add(node);
-      } else {
-        final parent = map[d.parentId];
-        if (parent != null) {
-          map[d.parentId!] = parent.copyWith(children: [...parent.children, node]);
-        }
-      }
-    }
-    return roots;
   }
 
   List<DimensionNode> _flatten(List<DimensionNode> nodes) {
