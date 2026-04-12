@@ -1,0 +1,15 @@
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/android/.gradle/
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+app/ios/Pods/
+app/ios/.symlinks/
+app/macos/Flutter/ephemeral/
+app/windows/Flutter/ephemeral/
+app/linux/Flutter/ephemeral/
+*.iml
