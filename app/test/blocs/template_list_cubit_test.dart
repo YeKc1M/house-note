@@ -14,19 +14,39 @@ void main() {
 
   blocTest<TemplateListCubit, TemplateListState>(
     'emits loaded templates on load',
-    build: () => TemplateListCubit(repo),
-    act: (cubit) {
+    setUp: () {
       when(() => repo.watchAllTemplates()).thenAnswer(
         (_) => Stream.value([
           Template(id: '1', name: 'T1', createdAt: 1, updatedAt: 1),
         ]),
       );
-      cubit.load();
     },
+    build: () => TemplateListCubit(repo),
+    act: (cubit) => cubit.load(),
     expect: () => [
       TemplateListState(templates: [
         Template(id: '1', name: 'T1', createdAt: 1, updatedAt: 1),
       ]),
     ],
   );
+
+  group('deleteTemplate', () {
+    blocTest<TemplateListCubit, TemplateListState>(
+      'calls repo.deleteTemplate with correct id',
+      setUp: () {
+        when(() => repo.watchAllTemplates()).thenAnswer(
+          (_) => Stream.value([]),
+        );
+        when(() => repo.deleteTemplate('1')).thenAnswer((_) async {});
+      },
+      build: () => TemplateListCubit(repo),
+      act: (cubit) async {
+        cubit.load();
+        await cubit.deleteTemplate('1');
+      },
+      verify: (_) {
+        verify(() => repo.deleteTemplate('1')).called(1);
+      },
+    );
+  });
 }
