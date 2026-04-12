@@ -254,4 +254,50 @@ void main() {
       expect(result.first.dimensionId, 'd2');
     });
   });
+
+  group('getRefSubtemplateDimensions', () {
+    test('returns only ref_subtemplate dimensions sorted by sortOrder', () async {
+      await db.into(db.templates).insert(TemplatesCompanion.insert(
+        id: 't1',
+        name: 'Template',
+        createdAt: 0,
+        updatedAt: 0,
+      ));
+      await db.into(db.templateDimensions).insert(
+        TemplateDimensionsCompanion.insert(
+          id: 'd1',
+          templateId: 't1',
+          name: 'Dim1',
+          type: 'ref_subtemplate',
+          config: '{}',
+          sortOrder: 1,
+        ),
+      );
+      await db.into(db.templateDimensions).insert(
+        TemplateDimensionsCompanion.insert(
+          id: 'd2',
+          templateId: 't1',
+          name: 'Dim2',
+          type: 'text',
+          config: '{}',
+          sortOrder: 0,
+        ),
+      );
+      await db.into(db.templateDimensions).insert(
+        TemplateDimensionsCompanion.insert(
+          id: 'd3',
+          templateId: 't1',
+          name: 'Dim3',
+          type: 'ref_subtemplate',
+          config: '{}',
+          sortOrder: 0,
+        ),
+      );
+
+      final result = await repo.getRefSubtemplateDimensions('t1');
+      expect(result.length, 2);
+      expect(result[0].id, 'd3');
+      expect(result[1].id, 'd1');
+    });
+  });
 }

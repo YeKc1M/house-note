@@ -62,13 +62,13 @@ class InstanceRepository {
     await _db.transaction(() async {
       await _db.into(_db.instances).insert(instance);
       for (final v in values) {
-        await _db.into(_db.instanceValues).insert(v, mode: InsertMode.insertOrReplace);
+        await _db.into(_db.instanceValues).insert(v);
       }
       for (final f in customFields) {
-        await _db.into(_db.instanceCustomFields).insert(f, mode: InsertMode.insertOrReplace);
+        await _db.into(_db.instanceCustomFields).insert(f);
       }
       for (final h in hiddenDimensions) {
-        await _db.into(_db.instanceHiddenDimensions).insert(h, mode: InsertMode.insertOrReplace);
+        await _db.into(_db.instanceHiddenDimensions).insert(h);
       }
     });
   }
@@ -81,8 +81,11 @@ class InstanceRepository {
   }) async {
     await _db.transaction(() async {
       await _db.update(_db.instances).replace(instance);
+      await (_db.delete(_db.instanceValues)
+        ..where((v) => v.instanceId.equals(instance.id.value)))
+        .go();
       for (final v in values) {
-        await _db.into(_db.instanceValues).insert(v, mode: InsertMode.insertOrReplace);
+        await _db.into(_db.instanceValues).insert(v);
       }
       await (_db.delete(_db.instanceCustomFields)
         ..where((f) => f.instanceId.equals(instance.id.value)))
@@ -100,13 +103,11 @@ class InstanceRepository {
   }
 
   Future<void> deleteInstance(String id) async {
-    await (_db.delete(_db.instances)..where((i) => i.id.equals(id))).go();
-  }
-
-  Future<List<TemplateDimension>> getRefSubtemplateDimensions(String templateId) async {
-    return (_db.select(_db.templateDimensions)
-      ..where((d) => d.templateId.equals(templateId) & d.type.equals('ref_subtemplate'))
-      ..orderBy([(d) => OrderingTerm(expression: d.sortOrder)]))
-      .get();
+    await _db.transaction(() async {
+      await (_db.delete(_db.instances)
+        ..where((i) => i.parentInstanceId.equals(id)))
+        .go();
+      await (_db.delete(_db.instances)..where((i) => i.id.equals(id))).go();
+    });
   }
 }

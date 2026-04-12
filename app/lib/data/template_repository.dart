@@ -92,4 +92,11 @@ class TemplateRepository {
       }
     });
   }
+
+  Future<List<TemplateDimension>> getRefSubtemplateDimensions(String templateId) async {
+    return (_db.select(_db.templateDimensions)
+          ..where((d) => d.templateId.equals(templateId) & d.type.equals('ref_subtemplate'))
+          ..orderBy([(d) => OrderingTerm(expression: d.sortOrder)]))
+        .get();
+  }
 }
