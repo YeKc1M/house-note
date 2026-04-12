@@ -1,12 +1,32 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'tables.dart';
 
-class AppDatabase {
-  AppDatabase() {
-    _openConnection();
-  }
+part 'database.g.dart';
 
-  QueryExecutor _openConnection() {
-    return driftDatabase(name: 'house_note_database');
+@DriftDatabase(tables: [
+  Templates,
+  TemplateDimensions,
+  Instances,
+  InstanceValues,
+  InstanceCustomFields,
+  InstanceHiddenDimensions,
+  TemplateThumbnailFields,
+])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase() : super(_openConnection());
+
+  AppDatabase.forTesting(QueryExecutor e) : super(e);
+
+  @override
+  int get schemaVersion => 1;
+
+  static QueryExecutor _openConnection() {
+    return driftDatabase(
+      name: 'house_note_db',
+      native: const DriftNativeOptions(
+        databaseDirectory: getApplicationSupportDirectory,
+      ),
+    );
   }
 }
