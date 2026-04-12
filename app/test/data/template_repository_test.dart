@@ -1,7 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:house_note/data/database.dart';
-import 'package:house_note/data/tables.dart';
 import 'package:house_note/data/template_repository.dart';
 
 void main() {
