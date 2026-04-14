@@ -50,6 +50,7 @@ class TemplateListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'templateListFab',
         onPressed: () => Navigator.pushNamed(context, '/templateEditor'),
         child: const Icon(Icons.add),
       ),

@@ -113,11 +113,12 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     final nameController = TextEditingController(text: node?.name ?? '');
     String type = node?.type ?? initialType;
     final configController = TextEditingController(text: node?.config ?? '{}');
+    final cubit = context.read<TemplateEditorCubit>();
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (dialogContext, setState) => AlertDialog(
           title: Text(node == null ? '添加维度' : '编辑维度'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -143,10 +144,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('取消')),
             TextButton(
               onPressed: () {
-                final cubit = context.read<TemplateEditorCubit>();
                 if (node == null) {
                   cubit.addDimension(
                     name: nameController.text,
@@ -161,7 +161,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     config: configController.text,
                   );
                 }
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
               child: const Text('保存'),
             ),

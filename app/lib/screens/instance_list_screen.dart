@@ -64,6 +64,7 @@ class InstanceListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'instanceListFab',
         onPressed: () async {
           final cubit = context.read<InstanceListCubit>();
           final state = cubit.state;

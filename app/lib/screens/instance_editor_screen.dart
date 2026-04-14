@@ -274,14 +274,15 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
   }
 
   void _showAddCustomFieldDialog(BuildContext context) {
+    final cubit = context.read<InstanceEditorCubit>();
     final nameController = TextEditingController();
     String type = 'text';
     final configController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setState) => AlertDialog(
           title: const Text('添加自定义字段'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -310,17 +311,17 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('取消'),
             ),
             TextButton(
               onPressed: () {
-                context.read<InstanceEditorCubit>().addCustomField(
+                cubit.addCustomField(
                   nameController.text,
                   type,
                   config: configController.text,
                 );
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
               child: const Text('添加'),
             ),
@@ -334,6 +335,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
     BuildContext context,
     InstanceEditorState state,
   ) {
+    final cubit = context.read<InstanceEditorCubit>();
     final hidden = state.dimensions
         .expand((n) => n.flatten())
         .where((f) => state.hiddenDimensionIds.contains(f.node.id))
@@ -341,7 +343,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('恢复显示隐藏的字段'),
         content: SizedBox(
           width: double.maxFinite,
@@ -354,10 +356,8 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
                 title: Text(node.name),
                 trailing: TextButton(
                   onPressed: () {
-                    context
-                        .read<InstanceEditorCubit>()
-                        .restoreDimension(node.id);
-                    Navigator.pop(context);
+                    cubit.restoreDimension(node.id);
+                    Navigator.pop(dialogContext);
                   },
                   child: const Text('恢复显示'),
                 ),
@@ -367,7 +367,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('关闭'),
           ),
         ],

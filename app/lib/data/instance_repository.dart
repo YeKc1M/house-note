@@ -80,7 +80,7 @@ class InstanceRepository {
     List<InstanceHiddenDimensionsCompanion> hiddenDimensions = const [],
   }) async {
     await _db.transaction(() async {
-      await _db.update(_db.instances).replace(instance);
+      await (_db.update(_db.instances)..where((i) => i.id.equals(instance.id.value))).write(instance);
       await (_db.delete(_db.instanceValues)
         ..where((v) => v.instanceId.equals(instance.id.value)))
         .go();
