@@ -232,6 +232,83 @@ void main() {
       expect(find.text('房子模板'), findsOneWidget);
     });
 
+    testWidgets('Story 1.2 - Edit existing template and subtemplate reference',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Pre-create templates directly in DB
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', null, '楼层', 'number', '{}'),
+        _dim('d6', null, '户型', 'text', '{}'),
+      ]);
+      final apartmentTemplateId = await _insertTemplate(db, '公寓模板', [
+        _dim('d7', null, '租金', 'number', '{}'),
+      ]);
+      final communityTemplateId = await _insertTemplate(db, '小区模板', [
+        _dim('d1', null, '小区名', 'text', '{}'),
+        _dim('d2', null, '位置', 'text', '{}'),
+        _dim('d3', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"$houseTemplateId"}'),
+      ]);
+
+      // Navigate to 模板 tab
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+
+      // Tap 小区模板 to edit
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+
+      // Edit 小区名 -> 社区名
+      final nameTile = find.widgetWithText(ListTile, '小区名 (text)');
+      final nameEditButton = find.descendant(of: nameTile, matching: find.byIcon(Icons.edit));
+      await tester.tap(nameEditButton);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(dialogTextField(0), '社区名');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('保存').last);
+      await tester.pumpAndSettle();
+
+      // Add a new ref_subtemplate dimension: 公寓列表 referencing 公寓模板
+      await tester.tap(find.text('添加维度项'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(0), '公寓列表');
+      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('引用子模板').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(1), '{"ref_template_id":"$apartmentTemplateId"}');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('保存').last);
+      await tester.pumpAndSettle();
+
+      // Save template
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      // Rebuild and verify
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('社区名 (text)'), findsOneWidget);
+      expect(find.text('公寓列表 (ref_subtemplate)'), findsOneWidget);
+
+      // Verify DB has both ref_subtemplate dimensions
+      final allDims = await (db.select(db.templateDimensions)
+            ..where((td) => td.templateId.equals(communityTemplateId)))
+          .get();
+      final refDims = allDims.where((d) => d.type == 'ref_subtemplate').toList();
+      expect(refDims.length, 2);
+      expect(refDims.map((d) => d.name), containsAll(['房子列表', '公寓列表']));
+    });
+
     testWidgets('Story 2.1 + 2.2 - Create top-level and child instances',
         (WidgetTester tester) async {
       await tester.pumpWidget(HouseNoteApp(database: db));

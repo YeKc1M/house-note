@@ -48,7 +48,9 @@ class TemplateRepository {
     List<TemplateDimensionsCompanion> dimensions,
   ) async {
     await _db.transaction(() async {
-      await _db.update(_db.templates).replace(template);
+      await (_db.update(_db.templates)
+            ..where((t) => t.id.equals(template.id.value)))
+          .write(template);
       await (_db.delete(_db.templateDimensions)
             ..where((d) => d.templateId.equals(template.id.value)))
           .go();
