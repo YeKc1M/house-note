@@ -246,7 +246,7 @@ class _DimensionDialogState extends State<_DimensionDialog> {
         children: [
           TextField(controller: _nameController, decoration: const InputDecoration(labelText: '名称')),
           DropdownButtonFormField<String>(
-            value: _type,
+            initialValue: _type,
             items: const [
               DropdownMenuItem(value: 'text', child: Text('文本')),
               DropdownMenuItem(value: 'single_choice', child: Text('单选')),
