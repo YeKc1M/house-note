@@ -15,6 +15,10 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
 
   TemplateEditorCubit(this._repo) : super(const TemplateEditorState());
 
+  Future<List<Template>> getAllTemplates() => _repo.watchAllTemplates().first;
+
+  String? get currentTemplateId => _templateId;
+
   void setTemplateName(String name) {
     emit(state.copyWith(templateName: name));
   }

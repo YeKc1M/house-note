@@ -34,6 +34,48 @@ Finder dialogTextField(int index) {
   ).at(index);
 }
 
+Finder dialogOptionTextField() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.widgetWithText(TextField, '选项'),
+  );
+}
+
+Finder dialogAddButton() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.widgetWithText(ElevatedButton, '添加'),
+  );
+}
+
+Finder dialogDropdown() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.byType(DropdownButtonFormField<String>),
+  );
+}
+
+Future<void> addSingleChoiceOption(WidgetTester tester, String option) async {
+  await tester.enterText(dialogOptionTextField(), option);
+  await tester.pumpAndSettle();
+  await tester.tap(dialogAddButton());
+  await tester.pumpAndSettle();
+}
+
+Future<void> selectDimensionType(WidgetTester tester, String typeLabel) async {
+  await tester.tap(dialogDropdown().first);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(typeLabel).last);
+  await tester.pumpAndSettle();
+}
+
+Finder dialogTemplateDropdown() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.byType(DropdownButtonFormField<String>),
+  ).at(1);
+}
+
 Future<void> pumpUntilFound(WidgetTester tester, Finder finder,
     {Duration timeout = const Duration(seconds: 5)}) async {
   final end = DateTime.now().add(timeout);
@@ -52,6 +94,14 @@ Future<void> pumpUntilAbsent(WidgetTester tester, Finder finder,
     await tester.pump(const Duration(milliseconds: 100));
   }
   throw Exception('Timed out waiting for $finder to disappear');
+}
+
+Finder visibilityToggleForDimension(String dimensionName) {
+  final tile = find.widgetWithText(ListTile, dimensionName);
+  return find.descendant(
+    of: tile,
+    matching: find.byIcon(Icons.visibility_off),
+  );
 }
 
 void main() {
@@ -97,12 +147,11 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '朝向');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('单选').last);
-      await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(1), '{"options":["东","南","西","北"]}');
-      await tester.pumpAndSettle();
+      await selectDimensionType(tester, '单选');
+      await addSingleChoiceOption(tester, '东');
+      await addSingleChoiceOption(tester, '南');
+      await addSingleChoiceOption(tester, '西');
+      await addSingleChoiceOption(tester, '北');
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
@@ -110,10 +159,7 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '楼层');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('数字').last);
-      await tester.pumpAndSettle();
+      await selectDimensionType(tester, '数字');
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
@@ -121,24 +167,19 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '户型');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('文本').last);
-      await tester.pumpAndSettle();
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
       // Save template
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
 
       // Verify template was saved in DB
       final templates = await db.select(db.templates).get();
       expect(templates.map((t) => t.name), contains('房子模板'));
 
-      // Rebuild app to force fresh load of template list (workaround for stream watcher in tests)
+      // Rebuild app to force fresh load of template list
       await tester.pumpWidget(HouseNoteApp(database: db));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
@@ -171,10 +212,6 @@ void main() {
       await tester.tap(find.text('添加子维度组'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '通勤');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('子维度组').last);
-      await tester.pumpAndSettle();
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
@@ -182,12 +219,9 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '是否靠近地铁站');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('单选').last);
-      await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(1), '{"options":["是","否"]}');
-      await tester.pumpAndSettle();
+      await selectDimensionType(tester, '单选');
+      await addSingleChoiceOption(tester, '是');
+      await addSingleChoiceOption(tester, '否');
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
@@ -202,13 +236,12 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '房子列表');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
+      await selectDimensionType(tester, '引用子模板');
+      // Wait for templates to load and select 房子模板
+      await pumpUntilFound(tester, dialogTemplateDropdown());
+      await tester.tap(dialogTemplateDropdown());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('引用子模板').last);
-      await tester.pumpAndSettle();
-      final houseTemplates = await (db.select(db.templates)..where((t) => t.name.equals('房子模板'))).get();
-      final houseTemplateId = houseTemplates.first.id;
-      await tester.enterText(dialogTextField(1), '{"ref_template_id":"$houseTemplateId"}');
+      await tester.tap(find.text('房子模板').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
@@ -216,7 +249,6 @@ void main() {
       // Save template
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
 
       // Verify both templates exist in DB
@@ -275,11 +307,11 @@ void main() {
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '公寓列表');
-      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
+      await selectDimensionType(tester, '引用子模板');
+      await pumpUntilFound(tester, dialogTemplateDropdown());
+      await tester.tap(dialogTemplateDropdown());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('引用子模板').last);
-      await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(1), '{"ref_template_id":"$apartmentTemplateId"}');
+      await tester.tap(find.text('公寓模板').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
@@ -350,14 +382,13 @@ void main() {
       // Save instance
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('华润二十四城'));
 
       // Verify instance appears in list
       expect(find.text('华润二十四城'), findsOneWidget);
 
-      // Drill down into the instance (it has ref_subtemplate, so it should show children)
+      // Drill down into the instance
       await tester.tap(find.text('华润二十四城'));
       await tester.pumpAndSettle();
       expect(find.text('全部'), findsOneWidget);
@@ -366,14 +397,12 @@ void main() {
       // Create child instance under 华润二十四城
       await tester.tap(instanceListFab(), warnIfMissed: false);
       await tester.pumpAndSettle();
-      // Since there's only one ref_subtemplate, it should directly navigate to editor
-      // If a dialog appears, select the template
       if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
         await tester.tap(find.text('房子模板'));
         await tester.pumpAndSettle();
       }
 
-      // Wait for the editor to fully load dimensions (async initState)
+      // Wait for the editor to fully load dimensions
       await pumpUntilFound(tester, find.text('朝向'));
 
       // Enter instance name
@@ -391,14 +420,13 @@ void main() {
       // Save instance
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('7栋-1203'));
 
       // Verify child instance appears
       expect(find.text('7栋-1203'), findsOneWidget);
 
-      // Drill down to view instance details (no deeper ref_subtemplate, so it opens editor)
+      // Drill down to view instance details
       await tester.tap(find.text('7栋-1203'));
       await tester.pumpAndSettle();
       expect(find.text('7栋-1203'), findsOneWidget);
@@ -441,7 +469,7 @@ void main() {
       // Wait for dialog to close
       await pumpUntilAbsent(tester, find.byType(AlertDialog));
 
-      // Set custom field value to true (tap the SwitchListTile by text, avoid ambiguous EditableText)
+      // Set custom field value to true
       await tester.tap(find.widgetWithText(SwitchListTile, '房东是否好沟通'));
       await tester.pumpAndSettle();
 
@@ -454,7 +482,6 @@ void main() {
       // Save instance
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('7栋-1203'));
 
@@ -473,7 +500,6 @@ void main() {
       // Save instance
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
-      // Wait for SnackBar to dismiss
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('7栋-1203'));
 
@@ -541,6 +567,139 @@ void main() {
       expect(find.text('全部'), findsOneWidget);
       expect(find.text('华润二十四城'), findsOneWidget);
     });
+
+    testWidgets('Story 3.2 - Configure thumbnail fields in template editor and verify on instance cards',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Pre-create templates with dimensions in DB
+      final communityTemplateId = await _insertTemplate(db, '小区模板', [
+        _dim('d1', null, '小区名', 'text', '{}'),
+        _dim('d2', null, '位置', 'text', '{}'),
+        _dim('d3', null, '地铁', 'single_choice', '{"options":["是","否"]}'),
+      ]);
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', null, '楼层', 'number', '{}'),
+        _dim('d6', null, '户型', 'text', '{}'),
+      ]);
+
+      // Insert ref_subtemplate on community template
+      await db.into(db.templateDimensions).insert(
+        TemplateDimensionsCompanion(
+          id: const Value('d7'),
+          templateId: Value(communityTemplateId),
+          name: const Value('房子列表'),
+          type: const Value('ref_subtemplate'),
+          config: Value('{"ref_template_id":"$houseTemplateId"}'),
+          sortOrder: const Value(3),
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
+
+      // Navigate to 模板 tab to configure thumbnails for 小区模板
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+
+      // Enable thumbnail visibility for 位置 and 地铁
+      await tester.tap(visibilityToggleForDimension('位置 (text)'));
+      await tester.pumpAndSettle();
+      await tester.tap(visibilityToggleForDimension('地铁 (single_choice)'));
+      await tester.pumpAndSettle();
+
+      // Verify thumbnail preview shows the selected dimensions
+      expect(find.text('缩略图显示字段'), findsOneWidget);
+      expect(find.text('位置'), findsWidgets);
+      expect(find.text('地铁'), findsWidgets);
+
+      // Save template
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      // Configure thumbnails for 房子模板
+      await tester.tap(find.text('房子模板'));
+      await tester.pumpAndSettle();
+
+      // Enable thumbnail visibility for 朝向, 楼层, 户型
+      await tester.tap(visibilityToggleForDimension('朝向 (single_choice)'));
+      await tester.pumpAndSettle();
+      await tester.tap(visibilityToggleForDimension('楼层 (number)'));
+      await tester.pumpAndSettle();
+      await tester.tap(visibilityToggleForDimension('户型 (text)'));
+      await tester.pumpAndSettle();
+
+      // Save template
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      // Navigate to 首页 and create instances AFTER thumbnail config so stream emits with thumbs
+      await tester.tap(bottomNavItem('首页'));
+      await tester.pumpAndSettle();
+
+      // Create top-level community instance
+      await tester.tap(instanceListFab());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '华润二十四城');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '位置'), matching: find.byType(TextFormField)),
+        '成华区双庆路',
+      );
+      await tester.pumpAndSettle();
+      // 地铁 = 是 (choice chip)
+      await tester.tap(find.text('是'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      // Wait for and verify thumbnail chips appear on the community instance card
+      await pumpUntilFound(tester, find.text('位置: 成华区双庆路'));
+      expect(find.text('地铁: 是'), findsOneWidget);
+
+      // Drill down to house level
+      await tester.tap(find.text('华润二十四城'));
+      await tester.pumpAndSettle();
+
+      // Create child house instance
+      await tester.tap(instanceListFab(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+        await tester.tap(find.text('房子模板'));
+        await tester.pumpAndSettle();
+      }
+      await pumpUntilFound(tester, find.text('朝向'));
+      await tester.enterText(find.byType(TextFormField).first, '7栋-1203');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('南'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '楼层'), matching: find.byType(TextFormField)),
+        '12',
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '户型'), matching: find.byType(TextFormField)),
+        '三室两厅',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      // Verify house card thumbnails
+      await pumpUntilFound(tester, find.text('朝向: 南'));
+      expect(find.text('楼层: 12'), findsOneWidget);
+      expect(find.text('户型: 三室两厅'), findsOneWidget);
+    });
   });
 }
 
@@ -553,12 +712,12 @@ TemplateDimensionsCompanion _dim(
 ) {
   return TemplateDimensionsCompanion(
     id: Value(id),
-    templateId: Value(''),
+    templateId: const Value(''),
     parentId: Value(parentId),
     name: Value(name),
     type: Value(type),
     config: Value(config),
-    sortOrder: Value(0),
+    sortOrder: const Value(0),
   );
 }
 
@@ -568,8 +727,8 @@ Future<String> _insertTemplate(AppDatabase db, String name, List<TemplateDimensi
     TemplatesCompanion(
       id: Value(id),
       name: Value(name),
-      createdAt: Value(1),
-      updatedAt: Value(1),
+      createdAt: const Value(1),
+      updatedAt: const Value(1),
     ),
     mode: InsertMode.insertOrReplace,
   );
@@ -605,8 +764,8 @@ Future<String> _insertInstance(
       templateId: Value(templateId),
       parentInstanceId: Value(parentId),
       name: Value(name),
-      createdAt: Value(1),
-      updatedAt: Value(1),
+      createdAt: const Value(1),
+      updatedAt: const Value(1),
     ),
     mode: InsertMode.insertOrReplace,
   );

@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/template_editor/cubit.dart';
+import '../data/database.dart';
 import '../models/dimension_node.dart';
 import '../widgets/dimension_tree.dart';
 
@@ -165,6 +166,9 @@ class _DimensionDialogState extends State<_DimensionDialog> {
   late final TextEditingController _optionController;
   late String _type;
   List<String> _options = [];
+  List<Template> _templates = [];
+  String? _selectedTemplateId;
+  bool _templatesLoading = false;
 
   @override
   void initState() {
@@ -179,8 +183,23 @@ class _DimensionDialogState extends State<_DimensionDialog> {
         if (decoded['options'] is List) {
           _options = (decoded['options'] as List).cast<String>();
         }
+        if (decoded['ref_template_id'] is String) {
+          _selectedTemplateId = decoded['ref_template_id'] as String;
+        }
       } catch (_) {}
     }
+    if (_type == 'ref_subtemplate') {
+      _loadTemplates();
+    }
+  }
+
+  Future<void> _loadTemplates() async {
+    setState(() => _templatesLoading = true);
+    final templates = await widget.cubit.getAllTemplates();
+    setState(() {
+      _templates = templates;
+      _templatesLoading = false;
+    });
   }
 
   @override
@@ -189,6 +208,16 @@ class _DimensionDialogState extends State<_DimensionDialog> {
     _configController.dispose();
     _optionController.dispose();
     super.dispose();
+  }
+
+  String _buildConfig() {
+    if (_type == 'single_choice') {
+      return jsonEncode({'options': _options});
+    }
+    if (_type == 'ref_subtemplate' && _selectedTemplateId != null) {
+      return jsonEncode({'ref_template_id': _selectedTemplateId});
+    }
+    return _configController.text;
   }
 
   @override
@@ -232,12 +261,24 @@ class _DimensionDialogState extends State<_DimensionDialog> {
           ),
         ],
       );
+    } else if (_type == 'ref_subtemplate') {
+      configWidget = _templatesLoading
+          ? const SizedBox(
+              height: 48,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : DropdownButtonFormField<String>(
+              value: _selectedTemplateId,
+              items: _templates
+                  .where((t) => t.id != widget.cubit.currentTemplateId)
+                  .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedTemplateId = v),
+              decoration: const InputDecoration(labelText: '选择引用的模板'),
+              isExpanded: true,
+            );
     } else {
-      configWidget = TextField(
-        controller: _configController,
-        decoration: const InputDecoration(labelText: '配置 (JSON)'),
-        readOnly: true,
-      );
+      configWidget = const SizedBox.shrink();
     }
     return AlertDialog(
       title: Text(widget.node == null ? '添加维度' : '编辑维度'),
@@ -255,19 +296,25 @@ class _DimensionDialogState extends State<_DimensionDialog> {
               DropdownMenuItem(value: 'group', child: Text('子维度组')),
               DropdownMenuItem(value: 'ref_subtemplate', child: Text('引用子模板')),
             ],
-            onChanged: (v) => setState(() => _type = v!),
+            onChanged: (v) {
+              setState(() => _type = v!);
+              if (_type == 'ref_subtemplate') {
+                _loadTemplates();
+              }
+            },
             decoration: const InputDecoration(labelText: '类型'),
           ),
-          configWidget,
+          if (configWidget is! SizedBox) ...[
+            const SizedBox(height: 8),
+            configWidget,
+          ],
         ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
         TextButton(
           onPressed: () {
-            final config = _type == 'single_choice'
-                ? jsonEncode({'options': _options})
-                : _configController.text;
+            final config = _buildConfig();
             if (widget.node == null) {
               widget.cubit.addDimension(
                 name: _nameController.text,
