@@ -32,7 +32,7 @@ class InstanceListScreen extends StatelessWidget {
                     final inst = state.instances[index];
                     return InstanceCard(
                       instance: inst,
-                      thumbnailValues: const {}, // populated by repository lookup in real usage
+                      thumbnailValues: state.thumbnailValues[inst.id] ?? {},
                       onTap: () {
                         final templateRepo = context.read<TemplateRepository>();
                         templateRepo.getRefSubtemplateDimensions(inst.templateId).then((dims) async {

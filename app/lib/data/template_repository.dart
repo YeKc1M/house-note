@@ -101,4 +101,23 @@ class TemplateRepository {
           ..orderBy([(d) => OrderingTerm(expression: d.sortOrder)]))
         .get();
   }
+
+  Future<Map<String, String>> getThumbnailValues(String instanceId, String templateId) async {
+    final query = _db.customSelect(
+      '''
+      SELECT d.name, v.value
+      FROM template_thumbnail_fields f
+      INNER JOIN template_dimensions d ON f.dimension_id = d.id
+      LEFT JOIN instance_values v ON v.dimension_id = d.id AND v.instance_id = ?
+      WHERE f.template_id = ?
+      ORDER BY f.sort_order
+      ''',
+      variables: [Variable(instanceId), Variable(templateId)],
+    );
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        if (row.read<String?>('value') != null) row.read<String>('name'): row.read<String>('value'),
+    };
+  }
 }
