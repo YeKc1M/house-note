@@ -6,6 +6,8 @@ class DimensionTree extends StatelessWidget {
   final void Function(DimensionNode) onEdit;
   final void Function(String) onDelete;
   final void Function(int oldIndex, int newIndex, String? targetParentId) onReorder;
+  final Set<String> thumbnailDimensionIds;
+  final void Function(String) onToggleThumbnail;
 
   const DimensionTree({
     super.key,
@@ -13,6 +15,8 @@ class DimensionTree extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onReorder,
+    this.thumbnailDimensionIds = const {},
+    required this.onToggleThumbnail,
   });
 
   @override
@@ -38,6 +42,15 @@ class DimensionTree extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                icon: Icon(
+                  thumbnailDimensionIds.contains(item.node.id)
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                ),
+                tooltip: '缩略图显示',
+                onPressed: () => onToggleThumbnail(item.node.id),
+              ),
               IconButton(icon: const Icon(Icons.edit), onPressed: () => onEdit(item.node)),
               IconButton(icon: const Icon(Icons.delete), onPressed: () => onDelete(item.node.id)),
             ],

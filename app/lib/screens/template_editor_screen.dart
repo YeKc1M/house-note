@@ -84,6 +84,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                         newIndex: newIndex,
                         targetParentId: parentId,
                       ),
+                  thumbnailDimensionIds: state.thumbnailDimensionIds.toSet(),
+                  onToggleThumbnail: (id) => context.read<TemplateEditorCubit>().toggleThumbnailDimension(id),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
