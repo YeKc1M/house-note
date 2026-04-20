@@ -15,6 +15,10 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
 
   TemplateEditorCubit(this._repo) : super(const TemplateEditorState());
 
+  Future<List<Template>> getAllTemplates() => _repo.watchAllTemplates().first;
+
+  String? get currentTemplateId => _templateId;
+
   void setTemplateName(String name) {
     emit(state.copyWith(templateName: name));
   }
@@ -51,7 +55,9 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
     final removed = _removeFromTree(state.dimensions, moved.id);
 
     if (targetParentId != null) {
-      final targetNode = removed.expand((n) => n.flatten()).map((f) => f.node).firstWhere((n) => n.id == targetParentId);
+      final matches = removed.expand((n) => n.flatten()).map((f) => f.node).where((n) => n.id == targetParentId);
+      if (matches.isEmpty) return;
+      final targetNode = matches.first;
       final actualIndex = newIndex.clamp(0, targetNode.children.length);
       final updated = moved.copyWith(parentId: targetParentId);
       final newTree = _insertIntoParentAtIndex(removed, targetParentId, actualIndex, updated);
@@ -69,9 +75,12 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
     final data = await _repo.getTemplateById(id);
     if (data == null) return;
     _templateId = id;
+    final thumbnailFields = await _repo.getThumbnailFields(id);
+    final thumbnailIds = thumbnailFields.map((f) => f.dimensionId).toList();
     emit(state.copyWith(
       templateName: data.template.name,
       dimensions: buildDimensionTree(data.dimensions),
+      thumbnailDimensionIds: thumbnailIds,
     ));
   }
 
@@ -107,12 +116,42 @@ class TemplateEditorCubit extends Cubit<TemplateEditorState> {
         sortOrder: sortOrder,
       ));
     }
+    final thumbnailCompanions = state.thumbnailDimensionIds.asMap().entries.map((e) {
+      return TemplateThumbnailFieldsCompanion.insert(
+        id: const Uuid().v4(),
+        templateId: id,
+        dimensionId: e.value,
+        sortOrder: e.key,
+      );
+    }).toList();
+    await _repo.setThumbnailFields(id, thumbnailCompanions);
     if (_templateId != null) {
       await _repo.updateTemplate(template, companions);
     } else {
       await _repo.insertTemplate(template, companions);
       _templateId = id;
     }
+  }
+
+  void toggleThumbnailDimension(String dimensionId) {
+    final current = state.thumbnailDimensionIds;
+    if (current.contains(dimensionId)) {
+      emit(state.copyWith(
+        thumbnailDimensionIds: current.where((id) => id != dimensionId).toList(),
+      ));
+    } else {
+      emit(state.copyWith(
+        thumbnailDimensionIds: [...current, dimensionId],
+      ));
+    }
+  }
+
+  void reorderThumbnailDimensions(int oldIndex, int newIndex) {
+    final list = state.thumbnailDimensionIds.toList();
+    if (oldIndex < 0 || oldIndex >= list.length) return;
+    final item = list.removeAt(oldIndex);
+    list.insert(newIndex.clamp(0, list.length), item);
+    emit(state.copyWith(thumbnailDimensionIds: list));
   }
 
   List<DimensionNode> _flatten(List<DimensionNode> nodes) {

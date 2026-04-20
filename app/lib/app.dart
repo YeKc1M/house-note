@@ -85,7 +85,7 @@ class _MainShellState extends State<_MainShell> {
 
     final pages = [
       BlocProvider(
-        create: (_) => InstanceListCubit(instanceRepo)..loadTopLevel(),
+        create: (_) => InstanceListCubit(instanceRepo, templateRepo)..loadTopLevel(),
         child: const InstanceListScreen(),
       ),
       BlocProvider(
