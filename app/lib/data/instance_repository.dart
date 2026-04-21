@@ -117,4 +117,15 @@ class InstanceRepository {
     }
     await (_db.delete(_db.instances)..where((i) => i.id.equals(id))).go();
   }
+
+  Future<int> countDescendants(String id) async {
+    final children = await (_db.select(_db.instances)
+          ..where((i) => i.parentInstanceId.equals(id)))
+        .get();
+    int count = children.length;
+    for (final child in children) {
+      count += await countDescendants(child.id);
+    }
+    return count;
+  }
 }

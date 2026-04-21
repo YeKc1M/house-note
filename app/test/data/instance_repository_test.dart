@@ -282,4 +282,43 @@ void main() {
     expect(await repo.getInstanceById('child'), isNull);
     expect(await repo.getInstanceById('grandchild'), isNull);
   });
+
+  test('countDescendants returns total descendant count', () async {
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'p',
+      templateId: 'tmpl',
+      name: 'P',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'c1',
+      templateId: 'tmpl',
+      parentInstanceId: Value('p'),
+      name: 'C1',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'c2',
+      templateId: 'tmpl',
+      parentInstanceId: Value('p'),
+      name: 'C2',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'gc',
+      templateId: 'tmpl',
+      parentInstanceId: Value('c1'),
+      name: 'GC',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+
+    expect(await repo.countDescendants('p'), 3);
+    expect(await repo.countDescendants('c1'), 1);
+    expect(await repo.countDescendants('c2'), 0);
+    expect(await repo.countDescendants('gc'), 0);
+  });
 }
