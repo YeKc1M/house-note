@@ -250,4 +250,36 @@ void main() {
     expect(result.hiddenDimensions.length, 1);
     expect(result.hiddenDimensions.first.dimensionId, 'dim2');
   });
+
+  test('deleteInstance recursively deletes grandchild instances', () async {
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'parent',
+      templateId: 'tmpl',
+      name: 'Parent',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'child',
+      templateId: 'tmpl',
+      parentInstanceId: Value('parent'),
+      name: 'Child',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await repo.insertInstance(InstancesCompanion.insert(
+      id: 'grandchild',
+      templateId: 'tmpl',
+      parentInstanceId: Value('child'),
+      name: 'Grandchild',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+
+    await repo.deleteInstance('parent');
+
+    expect(await repo.getInstanceById('parent'), isNull);
+    expect(await repo.getInstanceById('child'), isNull);
+    expect(await repo.getInstanceById('grandchild'), isNull);
+  });
 }
