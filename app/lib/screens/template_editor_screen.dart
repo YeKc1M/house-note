@@ -282,33 +282,35 @@ class _DimensionDialogState extends State<_DimensionDialog> {
     }
     return AlertDialog(
       title: Text(widget.node == null ? '添加维度' : '编辑维度'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(controller: _nameController, decoration: const InputDecoration(labelText: '名称')),
-          DropdownButtonFormField<String>(
-            initialValue: _type,
-            items: const [
-              DropdownMenuItem(value: 'text', child: Text('文本')),
-              DropdownMenuItem(value: 'single_choice', child: Text('单选')),
-              DropdownMenuItem(value: 'boolean', child: Text('布尔')),
-              DropdownMenuItem(value: 'number', child: Text('数字')),
-              DropdownMenuItem(value: 'group', child: Text('子维度组')),
-              DropdownMenuItem(value: 'ref_subtemplate', child: Text('引用子模板')),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: '名称')),
+            DropdownButtonFormField<String>(
+              initialValue: _type,
+              items: const [
+                DropdownMenuItem(value: 'text', child: Text('文本')),
+                DropdownMenuItem(value: 'single_choice', child: Text('单选')),
+                DropdownMenuItem(value: 'boolean', child: Text('布尔')),
+                DropdownMenuItem(value: 'number', child: Text('数字')),
+                DropdownMenuItem(value: 'group', child: Text('子维度组')),
+                DropdownMenuItem(value: 'ref_subtemplate', child: Text('引用子模板')),
+              ],
+              onChanged: (v) {
+                setState(() => _type = v!);
+                if (_type == 'ref_subtemplate') {
+                  _loadTemplates();
+                }
+              },
+              decoration: const InputDecoration(labelText: '类型'),
+            ),
+            if (configWidget is! SizedBox) ...[
+              const SizedBox(height: 8),
+              configWidget,
             ],
-            onChanged: (v) {
-              setState(() => _type = v!);
-              if (_type == 'ref_subtemplate') {
-                _loadTemplates();
-              }
-            },
-            decoration: const InputDecoration(labelText: '类型'),
-          ),
-          if (configWidget is! SizedBox) ...[
-            const SizedBox(height: 8),
-            configWidget,
           ],
-        ],
+        ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),

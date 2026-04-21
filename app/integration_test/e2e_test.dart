@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:house_note/app.dart';
 import 'package:house_note/data/database.dart';
+import 'package:house_note/widgets/instance_card.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -699,6 +700,62 @@ void main() {
       await pumpUntilFound(tester, find.text('朝向: 南'));
       expect(find.text('楼层: 12'), findsOneWidget);
       expect(find.text('户型: 三室两厅'), findsOneWidget);
+    });
+
+    testWidgets('Story 4.1 - Swipe to delete parent instance cascades to children',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Pre-create a 3-level hierarchy directly in DB
+      final communityTemplateId = await _insertTemplate(db, '小区模板', [
+        _dim('d1', null, '小区名', 'text', '{}'),
+        _dim('d2', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+      ]);
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        _dim('d3', null, '朝向', 'single_choice', '{"options":["东","南"]}'),
+        _dim('d4', null, '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
+      ]);
+      final roomTemplateId = await _insertTemplate(db, '房间模板', [
+        _dim('d5', null, '面积', 'number', '{}'),
+      ]);
+      // Fix refs to actual IDs
+      await (db.update(db.templateDimensions)..where((td) => td.id.equals('d2')))
+          .write(TemplateDimensionsCompanion(config: Value('{"ref_template_id":"$houseTemplateId"}')));
+      await (db.update(db.templateDimensions)..where((td) => td.id.equals('d4')))
+          .write(TemplateDimensionsCompanion(config: Value('{"ref_template_id":"$roomTemplateId"}')));
+
+      final communityId = await _insertInstance(db, communityTemplateId, null, '华润二十四城', {'d1': '华润二十四城'});
+      final houseId = await _insertInstance(db, houseTemplateId, communityId, '7栋-1203', {'d3': '南'});
+      await _insertInstance(db, roomTemplateId, houseId, '主卧', {'d5': '20'});
+
+      // Navigate to 首页
+      await tester.tap(bottomNavItem('首页'));
+      await tester.pumpAndSettle();
+
+      // Verify parent instance is visible
+      expect(find.text('华润二十四城'), findsOneWidget);
+
+      // Swipe left on the instance card to trigger delete
+      final cardFinder = find.widgetWithText(InstanceCard, '华润二十四城');
+      await tester.drag(cardFinder, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      // Wait for confirm dialog to appear with descendant count
+      await pumpUntilFound(tester, find.text('确认删除'));
+      expect(find.textContaining('将同时删除 2 个子实例'), findsOneWidget);
+
+      // Tap delete
+      await tester.tap(find.widgetWithText(TextButton, '删除'));
+      await tester.pumpAndSettle();
+
+      // Verify SnackBar and card disappearance
+      await pumpUntilFound(tester, find.text('实例已删除'));
+      await pumpUntilAbsent(tester, find.text('华润二十四城'));
+
+      // Verify all instances are deleted from DB (cascade)
+      final allInstances = await db.select(db.instances).get();
+      expect(allInstances, isEmpty);
     });
   });
 }
