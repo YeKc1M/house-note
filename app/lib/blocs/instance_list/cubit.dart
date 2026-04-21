@@ -39,6 +39,10 @@ class InstanceListCubit extends Cubit<InstanceListState> {
     }
   }
 
+  Future<void> deleteInstance(String id) async {
+    await _repo.deleteInstance(id);
+  }
+
   Future<Map<String, Map<String, String>>> _loadThumbnails(List<Instance> instances) async {
     final result = <String, Map<String, String>>{};
     for (final inst in instances) {

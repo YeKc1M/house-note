@@ -57,4 +57,16 @@ void main() {
       }),
     ],
   );
+
+  blocTest<InstanceListCubit, InstanceListState>(
+    'deleteInstance calls repository delete',
+    build: () => InstanceListCubit(repo, templateRepo),
+    setUp: () {
+      when(() => repo.deleteInstance('i1')).thenAnswer((_) async {});
+    },
+    act: (cubit) => cubit.deleteInstance('i1'),
+    verify: (_) {
+      verify(() => repo.deleteInstance('i1')).called(1);
+    },
+  );
 }
