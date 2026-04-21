@@ -104,10 +104,17 @@ class InstanceRepository {
 
   Future<void> deleteInstance(String id) async {
     await _db.transaction(() async {
-      await (_db.delete(_db.instances)
-        ..where((i) => i.parentInstanceId.equals(id)))
-        .go();
-      await (_db.delete(_db.instances)..where((i) => i.id.equals(id))).go();
+      await _deleteInstanceRecursive(id);
     });
+  }
+
+  Future<void> _deleteInstanceRecursive(String id) async {
+    final children = await (_db.select(_db.instances)
+          ..where((i) => i.parentInstanceId.equals(id)))
+        .get();
+    for (final child in children) {
+      await _deleteInstanceRecursive(child.id);
+    }
+    await (_db.delete(_db.instances)..where((i) => i.id.equals(id))).go();
   }
 }
