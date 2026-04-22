@@ -30,6 +30,37 @@ class CustomFieldData extends Equatable {
   List<Object?> get props => [id, name, type, value, config];
 }
 
+class ChildInstanceSummary extends Equatable {
+  final String id;
+  final String name;
+  final String templateId;
+  final Map<String, String> thumbnailValues;
+
+  const ChildInstanceSummary({
+    required this.id,
+    required this.name,
+    required this.templateId,
+    this.thumbnailValues = const {},
+  });
+
+  ChildInstanceSummary copyWith({
+    String? id,
+    String? name,
+    String? templateId,
+    Map<String, String>? thumbnailValues,
+  }) {
+    return ChildInstanceSummary(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      templateId: templateId ?? this.templateId,
+      thumbnailValues: thumbnailValues ?? this.thumbnailValues,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, name, templateId, thumbnailValues];
+}
+
 class InstanceEditorState extends Equatable {
   final String name;
   final String? templateId;
@@ -38,6 +69,7 @@ class InstanceEditorState extends Equatable {
   final Map<String, String> dimensionValues;
   final Set<String> hiddenDimensionIds;
   final List<CustomFieldData> customFields;
+  final Map<String, List<ChildInstanceSummary>> childInstances;
 
   const InstanceEditorState({
     this.name = '',
@@ -47,6 +79,7 @@ class InstanceEditorState extends Equatable {
     this.dimensionValues = const {},
     this.hiddenDimensionIds = const {},
     this.customFields = const [],
+    this.childInstances = const {},
   });
 
   InstanceEditorState copyWith({
@@ -57,6 +90,7 @@ class InstanceEditorState extends Equatable {
     Map<String, String>? dimensionValues,
     Set<String>? hiddenDimensionIds,
     List<CustomFieldData>? customFields,
+    Map<String, List<ChildInstanceSummary>>? childInstances,
   }) {
     return InstanceEditorState(
       name: name ?? this.name,
@@ -66,12 +100,13 @@ class InstanceEditorState extends Equatable {
       dimensionValues: dimensionValues ?? this.dimensionValues,
       hiddenDimensionIds: hiddenDimensionIds ?? this.hiddenDimensionIds,
       customFields: customFields ?? this.customFields,
+      childInstances: childInstances ?? this.childInstances,
     );
   }
 
   @override
   List<Object?> get props => [
     name, templateId, parentInstanceId, dimensions,
-    dimensionValues, hiddenDimensionIds, customFields,
+    dimensionValues, hiddenDimensionIds, customFields, childInstances,
   ];
 }

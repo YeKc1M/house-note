@@ -107,5 +107,30 @@ void main() {
         const InstanceEditorState(dimensionValues: {'d1': 'v1'}),
       ],
     );
+
+    blocTest<InstanceEditorCubit, InstanceEditorState>(
+      'state equality with childInstances',
+      build: () => InstanceEditorCubit(),
+      seed: () => const InstanceEditorState(
+        childInstances: {
+          'dim1': [
+            ChildInstanceSummary(id: 'i1', name: 'A', templateId: 't1'),
+          ],
+        },
+      ),
+      act: (cubit) {},
+      expect: () => [],
+      verify: (cubit) {
+        final s1 = cubit.state;
+        final s2 = s1.copyWith(
+          childInstances: {
+            'dim1': [
+              const ChildInstanceSummary(id: 'i1', name: 'A', templateId: 't1'),
+            ],
+          },
+        );
+        expect(s1, s2);
+      },
+    );
   });
 }
