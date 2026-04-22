@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:house_note/blocs/instance_editor/cubit.dart';
+import 'package:house_note/blocs/instance_editor/state.dart';
 
 void main() {
   group('InstanceEditorCubit', () {

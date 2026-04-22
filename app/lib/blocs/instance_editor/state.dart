@@ -44,13 +44,12 @@ class ChildInstanceSummary extends Equatable {
   });
 
   ChildInstanceSummary copyWith({
-    String? id,
     String? name,
     String? templateId,
     Map<String, String>? thumbnailValues,
   }) {
     return ChildInstanceSummary(
-      id: id ?? this.id,
+      id: id,
       name: name ?? this.name,
       templateId: templateId ?? this.templateId,
       thumbnailValues: thumbnailValues ?? this.thumbnailValues,
