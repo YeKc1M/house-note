@@ -456,13 +456,15 @@ void main() {
       await tester.tap(find.text('7栋-1203'));
       await tester.pumpAndSettle();
 
-      // Add custom field
+      // Add custom field (single choice: 是/否)
       await tester.tap(find.text('添加自定义字段'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '房东是否好沟通');
       await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('布尔').last);
+      await tester.tap(find.text('单选').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(1), '{"options":["是","否"]}');
       await tester.pumpAndSettle();
       await tester.tap(find.text('添加').last);
       await tester.pumpAndSettle();
@@ -470,8 +472,8 @@ void main() {
       // Wait for dialog to close
       await pumpUntilAbsent(tester, find.byType(AlertDialog));
 
-      // Set custom field value to true
-      await tester.tap(find.widgetWithText(SwitchListTile, '房东是否好沟通'));
+      // Set custom field value to 是
+      await tester.tap(find.widgetWithText(ChoiceChip, '是'));
       await tester.pumpAndSettle();
 
       // Hide dimension: 楼层
@@ -738,7 +740,7 @@ void main() {
 
       // Swipe left on the instance card to trigger delete
       final cardFinder = find.widgetWithText(InstanceCard, '华润二十四城');
-      await tester.drag(cardFinder, const Offset(-400, 0));
+      await tester.drag(cardFinder, const Offset(-800, 0));
       await tester.pumpAndSettle();
 
       // Wait for confirm dialog to appear with descendant count
@@ -756,6 +758,72 @@ void main() {
       // Verify all instances are deleted from DB (cascade)
       final allInstances = await db.select(db.instances).get();
       expect(allInstances, isEmpty);
+    });
+
+    testWidgets('Story 4.2 - Swipe to delete child instance cascades to grandchildren',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Pre-create a 3-level hierarchy directly in DB
+      final communityTemplateId = await _insertTemplate(db, '小区模板', [
+        _dim('d1', null, '小区名', 'text', '{}'),
+        _dim('d2', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+      ]);
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        _dim('d3', null, '朝向', 'single_choice', '{"options":["东","南"]}'),
+        _dim('d4', null, '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
+      ]);
+      final roomTemplateId = await _insertTemplate(db, '房间模板', [
+        _dim('d5', null, '面积', 'number', '{}'),
+      ]);
+      // Fix refs to actual IDs
+      await (db.update(db.templateDimensions)..where((td) => td.id.equals('d2')))
+          .write(TemplateDimensionsCompanion(config: Value('{"ref_template_id":"$houseTemplateId"}')));
+      await (db.update(db.templateDimensions)..where((td) => td.id.equals('d4')))
+          .write(TemplateDimensionsCompanion(config: Value('{"ref_template_id":"$roomTemplateId"}')));
+
+      final communityId = await _insertInstance(db, communityTemplateId, null, '华润二十四城', {'d1': '华润二十四城'});
+      final houseId = await _insertInstance(db, houseTemplateId, communityId, '7栋-1203', {'d3': '南'});
+      await _insertInstance(db, roomTemplateId, houseId, '主卧', {'d5': '20'});
+
+      // Navigate to 首页
+      await tester.tap(bottomNavItem('首页'));
+      await tester.pumpAndSettle();
+
+      // Drill down into parent instance
+      await tester.tap(find.text('华润二十四城'));
+      await tester.pumpAndSettle();
+
+      // Verify child instance is visible in the list
+      expect(find.text('7栋-1203'), findsOneWidget);
+
+      // Swipe left on the child instance card to trigger delete
+      final cardFinder = find.widgetWithText(InstanceCard, '7栋-1203');
+      await tester.drag(cardFinder, const Offset(-800, 0));
+      await tester.pumpAndSettle();
+
+      // Wait for confirm dialog to appear with descendant count (1 room)
+      await pumpUntilFound(tester, find.text('确认删除'));
+      expect(find.textContaining('将同时删除 1 个子实例'), findsOneWidget);
+
+      // Tap delete
+      await tester.tap(find.widgetWithText(TextButton, '删除'));
+      await tester.pumpAndSettle();
+
+      // Verify SnackBar and card disappearance
+      await pumpUntilFound(tester, find.text('实例已删除'));
+      await pumpUntilAbsent(tester, find.text('7栋-1203'));
+
+      // Verify parent instance still exists
+      final parentInstance = await (db.select(db.instances)..where((i) => i.id.equals(communityId))).getSingleOrNull();
+      expect(parentInstance, isNot(equals(null)));
+      expect(parentInstance!.name, '华润二十四城');
+
+      // Verify child and grandchild are deleted from DB (cascade)
+      final remainingInstances = await db.select(db.instances).get();
+      expect(remainingInstances.length, 1);
+      expect(remainingInstances.first.id, communityId);
     });
   });
 }

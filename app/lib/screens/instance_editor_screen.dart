@@ -177,12 +177,6 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
   Widget _buildInput(BuildContext context, DimensionNode node, String value) {
     final cubit = context.read<InstanceEditorCubit>();
     switch (node.type) {
-      case 'boolean':
-        return SwitchListTile(
-          value: value == 'true',
-          onChanged: (v) => cubit.updateDimensionValue(node.id, v.toString()),
-          title: const SizedBox.shrink(),
-        );
       case 'single_choice':
         final match =
             RegExp(r'"options"\s*:\s*\[(.*?)\]').firstMatch(node.config);
@@ -222,13 +216,6 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
   Widget _buildCustomField(BuildContext context, CustomFieldData f) {
     final cubit = context.read<InstanceEditorCubit>();
     switch (f.type) {
-      case 'boolean':
-        return SwitchListTile(
-          value: f.value == 'true',
-          onChanged: (v) =>
-              cubit.updateCustomField(f.id, value: v.toString()),
-          title: Text(f.name),
-        );
       case 'single_choice':
         final match =
             RegExp(r'"options"\s*:\s*\[(.*?)\]').firstMatch(f.config);
@@ -296,7 +283,6 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
                 items: const [
                   DropdownMenuItem(value: 'text', child: Text('文本')),
                   DropdownMenuItem(value: 'single_choice', child: Text('单选')),
-                  DropdownMenuItem(value: 'boolean', child: Text('布尔')),
                   DropdownMenuItem(value: 'number', child: Text('数字')),
                 ],
                 onChanged: (v) => setState(() => type = v!),

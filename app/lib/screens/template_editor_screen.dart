@@ -292,7 +292,6 @@ class _DimensionDialogState extends State<_DimensionDialog> {
               items: const [
                 DropdownMenuItem(value: 'text', child: Text('文本')),
                 DropdownMenuItem(value: 'single_choice', child: Text('单选')),
-                DropdownMenuItem(value: 'boolean', child: Text('布尔')),
                 DropdownMenuItem(value: 'number', child: Text('数字')),
                 DropdownMenuItem(value: 'group', child: Text('子维度组')),
                 DropdownMenuItem(value: 'ref_subtemplate', child: Text('引用子模板')),
