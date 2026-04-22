@@ -162,7 +162,6 @@ class _DimensionDialog extends StatefulWidget {
 
 class _DimensionDialogState extends State<_DimensionDialog> {
   late final TextEditingController _nameController;
-  late final TextEditingController _configController;
   late final TextEditingController _optionController;
   late String _type;
   List<String> _options = [];
@@ -175,7 +174,6 @@ class _DimensionDialogState extends State<_DimensionDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.node?.name ?? '');
     _type = widget.node?.type ?? widget.initialType;
-    _configController = TextEditingController(text: widget.node?.config ?? '{}');
     _optionController = TextEditingController();
     if (widget.node?.config != null && widget.node!.config.isNotEmpty) {
       try {
@@ -205,7 +203,6 @@ class _DimensionDialogState extends State<_DimensionDialog> {
   @override
   void dispose() {
     _nameController.dispose();
-    _configController.dispose();
     _optionController.dispose();
     super.dispose();
   }
@@ -217,7 +214,7 @@ class _DimensionDialogState extends State<_DimensionDialog> {
     if (_type == 'ref_subtemplate' && _selectedTemplateId != null) {
       return jsonEncode({'ref_template_id': _selectedTemplateId});
     }
-    return _configController.text;
+    return '{}';
   }
 
   @override

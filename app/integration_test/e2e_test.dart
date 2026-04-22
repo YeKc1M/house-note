@@ -464,9 +464,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('单选').last);
       await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(1), '{"options":["是","否"]}');
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('添加').last);
+      await addSingleChoiceOption(tester, '是');
+      await addSingleChoiceOption(tester, '否');
+      await tester.tap(find.widgetWithText(TextButton, '添加'));
       await tester.pumpAndSettle();
 
       // Wait for dialog to close
@@ -510,6 +510,95 @@ void main() {
       await tester.tap(find.text('7栋-1203'));
       await tester.pumpAndSettle();
       expect(find.text('楼层'), findsOneWidget);
+    });
+
+    testWidgets('Story 2.5 - Add custom fields of all types via tag editor',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Pre-create template and instance
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+      ]);
+      await _insertInstance(db, houseTemplateId, null, '测试房', {'d4': '南'});
+
+      // Navigate to 首页 and open instance editor
+      await tester.tap(bottomNavItem('首页'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('测试房'));
+      await tester.pumpAndSettle();
+
+      // Add text custom field
+      await tester.tap(find.text('添加自定义字段'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(0), '备注');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, '添加'));
+      await tester.pumpAndSettle();
+      await pumpUntilAbsent(tester, find.byType(AlertDialog));
+      expect(find.text('备注'), findsOneWidget);
+
+      // Add number custom field
+      await tester.tap(find.text('添加自定义字段'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(0), '押金');
+      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('数字').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, '添加'));
+      await tester.pumpAndSettle();
+      await pumpUntilAbsent(tester, find.byType(AlertDialog));
+      expect(find.text('押金'), findsOneWidget);
+
+      // Add single_choice custom field via tag editor
+      await tester.tap(find.text('添加自定义字段'));
+      await tester.pumpAndSettle();
+      await tester.enterText(dialogTextField(0), '是否带家具');
+      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(DropdownButtonFormField<String>)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('单选').last);
+      await tester.pumpAndSettle();
+      await addSingleChoiceOption(tester, '带家具');
+      await addSingleChoiceOption(tester, '不带家具');
+      await tester.tap(find.widgetWithText(TextButton, '添加'));
+      await tester.pumpAndSettle();
+      await pumpUntilAbsent(tester, find.byType(AlertDialog));
+
+      // Verify all custom fields are displayed
+      expect(find.text('备注'), findsOneWidget);
+      expect(find.text('押金'), findsOneWidget);
+      expect(find.text('是否带家具'), findsOneWidget);
+      // Verify choice chips for single_choice custom field
+      expect(find.text('带家具'), findsWidgets);
+      expect(find.text('不带家具'), findsWidgets);
+
+      // Fill values and save
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '备注'), matching: find.byType(TextFormField)),
+        '采光很好',
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '押金'), matching: find.byType(TextFormField)),
+        '2000',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '带家具'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+      await pumpUntilFound(tester, find.text('测试房'));
+
+      // Re-open and verify values persisted
+      await tester.tap(find.text('测试房'));
+      await tester.pumpAndSettle();
+      expect(find.text('备注'), findsOneWidget);
+      expect(find.text('押金'), findsOneWidget);
+      expect(find.text('是否带家具'), findsOneWidget);
     });
 
     testWidgets('Story 3.1 - Browse parent-child instances with breadcrumbs',

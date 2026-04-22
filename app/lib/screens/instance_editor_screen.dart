@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/instance_editor/cubit.dart';
@@ -263,56 +265,103 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
   void _showAddCustomFieldDialog(BuildContext context) {
     final cubit = context.read<InstanceEditorCubit>();
     final nameController = TextEditingController();
+    final optionController = TextEditingController();
     String type = 'text';
-    final configController = TextEditingController();
+    List<String> options = [];
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (_, setState) => AlertDialog(
-          title: const Text('添加自定义字段'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: '字段名'),
+        builder: (_, setState) {
+          Widget configWidget;
+          if (type == 'single_choice') {
+            configWidget = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: optionController,
+                        decoration: const InputDecoration(labelText: '选项'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final text = optionController.text.trim();
+                        if (text.isNotEmpty && !options.contains(text)) {
+                          setState(() => options.add(text));
+                          optionController.clear();
+                        }
+                      },
+                      child: const Text('添加'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: options
+                      .map((o) => InputChip(
+                            label: Text(o),
+                            onDeleted: () =>
+                                setState(() => options.remove(o)),
+                          ))
+                      .toList(),
+                ),
+              ],
+            );
+          } else {
+            configWidget = const SizedBox.shrink();
+          }
+
+          return AlertDialog(
+            title: const Text('添加自定义字段'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '字段名'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  items: const [
+                    DropdownMenuItem(value: 'text', child: Text('文本')),
+                    DropdownMenuItem(value: 'single_choice', child: Text('单选')),
+                    DropdownMenuItem(value: 'number', child: Text('数字')),
+                  ],
+                  onChanged: (v) => setState(() => type = v!),
+                  decoration: const InputDecoration(labelText: '类型'),
+                ),
+                if (configWidget is! SizedBox) configWidget,
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('取消'),
               ),
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                items: const [
-                  DropdownMenuItem(value: 'text', child: Text('文本')),
-                  DropdownMenuItem(value: 'single_choice', child: Text('单选')),
-                  DropdownMenuItem(value: 'number', child: Text('数字')),
-                ],
-                onChanged: (v) => setState(() => type = v!),
-                decoration: const InputDecoration(labelText: '类型'),
-              ),
-              TextField(
-                controller: configController,
-                decoration:
-                    const InputDecoration(labelText: '配置 (JSON，单选必填)'),
+              TextButton(
+                onPressed: () {
+                  final config = type == 'single_choice'
+                      ? jsonEncode({'options': options})
+                      : '{}';
+                  cubit.addCustomField(
+                    nameController.text,
+                    type,
+                    config: config,
+                  );
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('添加'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                cubit.addCustomField(
-                  nameController.text,
-                  type,
-                  config: configController.text,
-                );
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('添加'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
