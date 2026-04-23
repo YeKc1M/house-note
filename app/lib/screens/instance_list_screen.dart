@@ -101,6 +101,13 @@ class InstanceListScreen extends StatelessWidget {
                             }
                           });
                         },
+                        onEdit: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/instanceEditor',
+                            arguments: {'instanceId': inst.id},
+                          );
+                        },
                       ),
                     );
                   },
