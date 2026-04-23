@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/instance_editor/cubit.dart';
+import '../data/database.dart' show Instance;
 import '../models/dimension_node.dart';
+import '../widgets/instance_card.dart';
 
 class InstanceEditorScreen extends StatefulWidget {
   final String? instanceId;
@@ -151,7 +153,12 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
             ),
           ),
         );
-      } else if (node.type != 'ref_subtemplate') {
+      } else if (node.type == 'ref_subtemplate') {
+        final children = state.childInstances[node.id] ?? [];
+        widgets.add(
+          _buildRefSubtemplateCard(context, node, children),
+        );
+      } else {
         widgets.add(
           _buildFieldRow(
             context,
@@ -362,6 +369,94 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildRefSubtemplateCard(
+    BuildContext context,
+    DimensionNode node,
+    List<ChildInstanceSummary> children,
+  ) {
+    final cubit = context.read<InstanceEditorCubit>();
+    final isNewInstance = widget.instanceId == null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(node.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            if (isNewInstance)
+              const Text(
+                '请先保存父实例后再添加子实例',
+                style: TextStyle(color: Colors.grey),
+              )
+            else if (children.isEmpty)
+              const Text(
+                '暂无子实例',
+                style: TextStyle(color: Colors.grey),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: children.map((child) {
+                  return SizedBox(
+                    width: 160,
+                    child: InstanceCard(
+                      instance: Instance(
+                        id: child.id,
+                        templateId: child.templateId,
+                        parentInstanceId: widget.instanceId,
+                        name: child.name,
+                        createdAt: 0,
+                        updatedAt: 0,
+                      ),
+                      thumbnailValues: child.thumbnailValues,
+                      onTap: () async {
+                        final result = await Navigator.pushNamed(
+                          context,
+                          '/instanceEditor',
+                          arguments: {'instanceId': child.id},
+                        );
+                        if (result == true && mounted) {
+                          cubit.refreshChildInstances();
+                        }
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 8),
+            if (!isNewInstance)
+              TextButton.icon(
+                onPressed: () async {
+                  final match = RegExp(
+                    r'"ref_template_id"\s*:\s*"([^"]+)"',
+                  ).firstMatch(node.config);
+                  final refTemplateId = match?.group(1);
+                  if (refTemplateId == null) return;
+
+                  final result = await Navigator.pushNamed(
+                    context,
+                    '/instanceEditor',
+                    arguments: {
+                      'templateId': refTemplateId,
+                      'parentInstanceId': widget.instanceId,
+                    },
+                  );
+                  if (result == true && mounted) {
+                    cubit.refreshChildInstances();
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('添加子实例'),
+              ),
+          ],
+        ),
       ),
     );
   }
