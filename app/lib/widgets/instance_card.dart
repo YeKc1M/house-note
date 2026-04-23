@@ -6,6 +6,7 @@ class InstanceCard extends StatelessWidget {
   final Map<String, String> thumbnailValues;
   final int? childCount;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
 
   const InstanceCard({
     super.key,
@@ -13,6 +14,7 @@ class InstanceCard extends StatelessWidget {
     required this.thumbnailValues,
     this.childCount,
     required this.onTap,
+    this.onEdit,
   });
 
   @override
@@ -25,7 +27,21 @@ class InstanceCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(instance.name, style: Theme.of(context).textTheme.titleMedium),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      instance.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (onEdit != null)
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 20),
+                      onPressed: onEdit,
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
               if (thumbnailValues.isNotEmpty)
                 Wrap(

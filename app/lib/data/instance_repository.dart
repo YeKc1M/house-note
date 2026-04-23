@@ -34,6 +34,13 @@ class InstanceRepository {
       .watch();
   }
 
+  Future<List<Instance>> getChildInstances(String parentInstanceId) async {
+    return (_db.select(_db.instances)
+      ..where((i) => i.parentInstanceId.equals(parentInstanceId))
+      ..orderBy([(i) => OrderingTerm(expression: i.createdAt, mode: OrderingMode.desc)]))
+      .get();
+  }
+
   Future<InstanceWithData?> getInstanceById(String id) async {
     final instance = await (_db.select(_db.instances)
       ..where((i) => i.id.equals(id)))

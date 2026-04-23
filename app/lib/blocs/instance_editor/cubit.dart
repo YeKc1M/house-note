@@ -97,6 +97,50 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
       hiddenDimensionIds: hidden,
       customFields: custom,
     ));
+    await _loadChildInstances(instanceId, data.instance.templateId);
+  }
+
+  Future<void> refreshChildInstances() async {
+    if (_instanceId == null || _instanceRepo == null) return;
+    final data = await _instanceRepo!.getInstanceById(_instanceId!);
+    if (data == null) return;
+    await _loadChildInstances(_instanceId!, data.instance.templateId);
+  }
+
+  Future<void> _loadChildInstances(String parentInstanceId, String templateId) async {
+    if (_instanceRepo == null || _templateRepo == null) return;
+
+    final refDims = await _templateRepo!.getRefSubtemplateDimensions(templateId);
+    if (refDims.isEmpty) {
+      emit(state.copyWith(childInstances: const {}));
+      return;
+    }
+
+    final children = await _instanceRepo!.getChildInstances(parentInstanceId);
+    final result = <String, List<ChildInstanceSummary>>{};
+
+    for (final dim in refDims) {
+      final match = RegExp(r'"ref_template_id"\s*:\s*"([^"]+)"').firstMatch(dim.config);
+      final refTemplateId = match?.group(1);
+      if (refTemplateId == null) continue;
+
+      final dimChildren = children.where((c) => c.templateId == refTemplateId).toList();
+      final summaries = <ChildInstanceSummary>[];
+
+      for (final child in dimChildren) {
+        final thumbs = await _templateRepo!.getThumbnailValues(child.id, child.templateId);
+        summaries.add(ChildInstanceSummary(
+          id: child.id,
+          name: child.name,
+          templateId: child.templateId,
+          thumbnailValues: thumbs,
+        ));
+      }
+
+      result[dim.id] = summaries;
+    }
+
+    emit(state.copyWith(childInstances: result));
   }
 
   Future<void> saveInstance() async {
