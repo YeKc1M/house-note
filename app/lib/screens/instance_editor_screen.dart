@@ -58,7 +58,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
                 messenger.showSnackBar(
                   const SnackBar(content: Text('实例保存成功')),
                 );
-                navigator.pop();
+                navigator.pop(true);
               }
             },
           ),
