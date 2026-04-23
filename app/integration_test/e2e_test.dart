@@ -982,6 +982,82 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('东南'), findsOneWidget);
     });
+
+    testWidgets('Story 5.2 - Edit parent fields with child instances visible',
+        (WidgetTester tester) async {
+      // Seed data
+      final houseTemplateId = await _insertTemplate(db, '房子模板', [
+        TemplateDimensionsCompanion(
+          id: const Value('d1'),
+          name: const Value('朝向'),
+          type: const Value('single_choice'),
+          config: const Value('{"options": ["东", "南", "西", "北"]}'),
+        ),
+      ]);
+      final communityTemplateId = await _insertTemplate(db, '小区模板', [
+        TemplateDimensionsCompanion(
+          id: const Value('d2'),
+          name: const Value('小区名'),
+          type: const Value('text'),
+          config: const Value('{}'),
+        ),
+        TemplateDimensionsCompanion(
+          id: const Value('d3'),
+          name: const Value('位置'),
+          type: const Value('text'),
+          config: const Value('{}'),
+        ),
+        TemplateDimensionsCompanion(
+          id: const Value('d4'),
+          name: const Value('房子列表'),
+          type: const Value('ref_subtemplate'),
+          config: Value('{"ref_template_id": "$houseTemplateId"}'),
+        ),
+      ]);
+      final communityId = await _insertInstance(
+        db, communityTemplateId, null, '华润二十四城',
+        {'d2': '华润二十四城', 'd3': '成华区双庆路'},
+      );
+      await _insertInstance(
+        db, houseTemplateId, communityId, '7栋-1203', {'d1': '南'},
+      );
+
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Tap edit icon on community instance card
+      final editButton = find.descendant(
+        of: find.widgetWithText(InstanceCard, '华润二十四城'),
+        matching: find.byIcon(Icons.edit),
+      );
+      await tester.tap(editButton);
+      await tester.pumpAndSettle();
+
+      // Verify child instance card is visible
+      expect(find.widgetWithText(InstanceCard, '7栋-1203'), findsOneWidget);
+
+      // Edit parent field "位置"
+      final locationField = find.widgetWithText(TextFormField, '成华区双庆路');
+      await tester.enterText(locationField, '成华区双庆路6号');
+      await tester.pumpAndSettle();
+
+      // Save
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+
+      // Verify back on list page, then re-enter editor
+      expect(bottomNavItem('首页'), findsOneWidget);
+
+      await tester.tap(find.descendant(
+        of: find.widgetWithText(InstanceCard, '华润二十四城'),
+        matching: find.byIcon(Icons.edit),
+      ));
+      await tester.pumpAndSettle();
+
+      // Verify child card still visible and parent field updated
+      expect(find.widgetWithText(InstanceCard, '7栋-1203'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, '成华区双庆路6号'), findsOneWidget);
+    });
   });
 }
 
