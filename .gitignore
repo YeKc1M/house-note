@@ -14,3 +14,4 @@ app/windows/Flutter/ephemeral/
 app/linux/Flutter/ephemeral/
 *.iml
 .superpowers/
+.worktrees/
