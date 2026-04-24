@@ -1,20 +1,19 @@
 templates:
-  - id: community_template
-    name: 小区模板
+  - id: living_room_template
+    name: 客厅模板
     dimensions:
-      - name: 地址
+      - name: 电视状态
         type: text
-      - name: 建成年份
-        type: number
-      - name: 通勤
+      - name: 空调状态
         type: text
-      - name: 周边
+
+  - id: bedroom_template
+    name: 卧室模板
+    dimensions:
+      - name: 空调状态
         type: text
-      - name: 物业费
-        type: number
-      - name: 房子
-        type: ref_subtemplate
-        ref_template_id: house_template
+      - name: 床垫状态
+        type: text
 
   - id: house_template
     name: 房子模板
@@ -50,18 +49,19 @@ templates:
       - name: 微波炉状态
         type: text
 
-  - id: living_room_template
-    name: 客厅模板
+  - id: community_template
+    name: 小区模板
     dimensions:
-      - name: 电视状态
+      - name: 地址
         type: text
-      - name: 空调状态
+      - name: 建成年份
+        type: number
+      - name: 通勤
         type: text
-
-  - id: bedroom_template
-    name: 卧室模板
-    dimensions:
-      - name: 空调状态
+      - name: 周边
         type: text
-      - name: 床垫状态
-        type: text
+      - name: 物业费
+        type: number
+      - name: 房子
+        type: ref_subtemplate
+        ref_template_id: house_template
