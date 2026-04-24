@@ -5,6 +5,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:house_note/app.dart';
 import 'package:house_note/data/database.dart';
 import 'package:house_note/widgets/instance_card.dart';
+import 'package:house_note/data/default_template_loader.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -1050,6 +1051,222 @@ void main() {
       // Verify child card still visible and parent field updated
       expect(find.widgetWithText(InstanceCard, '7栋-1203'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, '成华区双庆路6号'), findsOneWidget);
+    });
+
+    testWidgets('Default templates are seeded on first launch',
+        (WidgetTester tester) async {
+      // Fresh DB + loader simulates first app launch
+      await DefaultTemplateLoader(db).loadIfNeeded();
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Navigate to 模板 tab
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+
+      // Verify all 4 default templates appear
+      expect(find.text('小区模板'), findsOneWidget);
+      expect(find.text('房子模板'), findsOneWidget);
+      expect(find.text('客厅模板'), findsOneWidget);
+      expect(find.text('卧室模板'), findsOneWidget);
+
+      // Verify 小区模板 has 房子 ref_subtemplate
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('房子 (ref_subtemplate)'), findsOneWidget);
+
+      // Go back
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      // Verify 房子模板 has single_choice dimensions
+      await tester.tap(find.text('房子模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('民水民电 (single_choice)'), findsOneWidget);
+      expect(find.text('电梯 (single_choice)'), findsOneWidget);
+    });
+
+    testWidgets('Deleted default template is not recreated on restart',
+        (WidgetTester tester) async {
+      // First launch
+      await DefaultTemplateLoader(db).loadIfNeeded();
+
+      // Delete 客厅模板 directly from DB
+      final livingRoom = await (db.select(db.templates)
+            ..where((t) => t.name.equals('客厅模板')))
+          .getSingle();
+      await (db.delete(db.templates)
+            ..where((t) => t.id.equals(livingRoom.id)))
+          .go();
+
+      // Restart app (re-pump)
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Call loader again simulating app restart
+      await DefaultTemplateLoader(db).loadIfNeeded();
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Navigate to 模板
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+
+      // 客厅模板 should still be gone
+      expect(find.text('客厅模板'), findsNothing);
+      // Others should still exist
+      expect(find.text('小区模板'), findsOneWidget);
+      expect(find.text('房子模板'), findsOneWidget);
+      expect(find.text('卧室模板'), findsOneWidget);
+    });
+
+    testWidgets('Manual restore recreates deleted default template',
+        (WidgetTester tester) async {
+      await DefaultTemplateLoader(db).loadIfNeeded();
+
+      // Delete 客厅模板
+      final livingRoom = await (db.select(db.templates)
+            ..where((t) => t.name.equals('客厅模板')))
+          .getSingle();
+      await (db.delete(db.templates)
+            ..where((t) => t.id.equals(livingRoom.id)))
+          .go();
+
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Go to Settings and restore
+      await tester.tap(bottomNavItem('设置'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('恢复默认模板'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+
+      // Verify snackbar
+      expect(find.text('已恢复 1 个模板'), findsOneWidget);
+
+      // Go to templates and verify 客厅模板 is back
+      await tester.tap(bottomNavItem('模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('客厅模板'), findsOneWidget);
+    });
+
+    testWidgets('Full instance creation flow with default templates',
+        (WidgetTester tester) async {
+      await DefaultTemplateLoader(db).loadIfNeeded();
+      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpAndSettle();
+
+      // Navigate to 首页
+      await tester.tap(bottomNavItem('首页'));
+      await tester.pumpAndSettle();
+
+      // Create top-level community instance
+      await tester.tap(instanceListFab());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('小区模板'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, '华润二十四城');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '地址'), matching: find.byType(TextFormField)),
+        '成华区双庆路',
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '建成年份'), matching: find.byType(TextFormField)),
+        '2015',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+      await pumpUntilFound(tester, find.text('华润二十四城'));
+
+      // Drill down to house level
+      await tester.tap(find.text('华润二十四城'));
+      await tester.pumpAndSettle();
+
+      // Create child house instance
+      await tester.tap(instanceListFab(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+        await tester.tap(find.text('房子模板'));
+        await tester.pumpAndSettle();
+      }
+      await pumpUntilFound(tester, find.text('房租'));
+
+      await tester.enterText(find.byType(TextFormField).first, '7栋-1203');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '房租'), matching: find.byType(TextFormField)),
+        '3500',
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '户型'), matching: find.byType(TextFormField)),
+        '三室一厅',
+      );
+      await tester.pumpAndSettle();
+      // Select 是 for 民水民电
+      await tester.tap(find.widgetWithText(ChoiceChip, '是'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+      await pumpUntilFound(tester, find.text('7栋-1203'));
+
+      // Drill down to room level
+      await tester.tap(find.text('7栋-1203'));
+      await tester.pumpAndSettle();
+
+      // Create 客厅 instance
+      await tester.tap(instanceListFab(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+        await tester.tap(find.text('客厅模板'));
+        await tester.pumpAndSettle();
+      }
+      await pumpUntilFound(tester, find.text('电视状态'));
+      await tester.enterText(find.byType(TextFormField).first, '客厅');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '电视状态'), matching: find.byType(TextFormField)),
+        '完好',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+      await pumpUntilFound(tester, find.text('客厅'));
+
+      // Create 卧室 instance
+      await tester.tap(instanceListFab(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+        await tester.tap(find.text('卧室模板'));
+        await tester.pumpAndSettle();
+      }
+      await pumpUntilFound(tester, find.text('床垫状态'));
+      await tester.enterText(find.byType(TextFormField).first, '主卧');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(of: find.widgetWithText(ListTile, '床垫状态'), matching: find.byType(TextFormField)),
+        '新床垫',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.save));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+      await pumpUntilFound(tester, find.text('主卧'));
+
+      // Verify breadcrumb
+      expect(find.text('全部'), findsOneWidget);
+      expect(find.text('华润二十四城'), findsOneWidget);
+      expect(find.text('7栋-1203'), findsOneWidget);
+      expect(find.text('客厅'), findsOneWidget);
+      expect(find.text('主卧'), findsOneWidget);
     });
   });
 }
