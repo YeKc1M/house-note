@@ -290,15 +290,6 @@ class $TemplateDimensionsTable extends TemplateDimensions
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES templates (id) ON DELETE CASCADE'));
-  static const VerificationMeta _parentIdMeta =
-      const VerificationMeta('parentId');
-  @override
-  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
-      'parent_id', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES template_dimensions (id)'));
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -322,7 +313,7 @@ class $TemplateDimensionsTable extends TemplateDimensions
       type: DriftSqlType.int, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, templateId, parentId, name, type, config, sortOrder];
+      [id, templateId, name, type, config, sortOrder];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -345,10 +336,6 @@ class $TemplateDimensionsTable extends TemplateDimensions
               data['template_id']!, _templateIdMeta));
     } else if (isInserting) {
       context.missing(_templateIdMeta);
-    }
-    if (data.containsKey('parent_id')) {
-      context.handle(_parentIdMeta,
-          parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta));
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -387,8 +374,6 @@ class $TemplateDimensionsTable extends TemplateDimensions
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       templateId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}template_id'])!,
-      parentId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}parent_id']),
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       type: attachedDatabase.typeMapping
@@ -410,7 +395,6 @@ class TemplateDimension extends DataClass
     implements Insertable<TemplateDimension> {
   final String id;
   final String templateId;
-  final String? parentId;
   final String name;
   final String type;
   final String config;
@@ -418,7 +402,6 @@ class TemplateDimension extends DataClass
   const TemplateDimension(
       {required this.id,
       required this.templateId,
-      this.parentId,
       required this.name,
       required this.type,
       required this.config,
@@ -428,9 +411,6 @@ class TemplateDimension extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['template_id'] = Variable<String>(templateId);
-    if (!nullToAbsent || parentId != null) {
-      map['parent_id'] = Variable<String>(parentId);
-    }
     map['name'] = Variable<String>(name);
     map['type'] = Variable<String>(type);
     map['config'] = Variable<String>(config);
@@ -442,9 +422,6 @@ class TemplateDimension extends DataClass
     return TemplateDimensionsCompanion(
       id: Value(id),
       templateId: Value(templateId),
-      parentId: parentId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(parentId),
       name: Value(name),
       type: Value(type),
       config: Value(config),
@@ -458,7 +435,6 @@ class TemplateDimension extends DataClass
     return TemplateDimension(
       id: serializer.fromJson<String>(json['id']),
       templateId: serializer.fromJson<String>(json['templateId']),
-      parentId: serializer.fromJson<String?>(json['parentId']),
       name: serializer.fromJson<String>(json['name']),
       type: serializer.fromJson<String>(json['type']),
       config: serializer.fromJson<String>(json['config']),
@@ -471,7 +447,6 @@ class TemplateDimension extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'templateId': serializer.toJson<String>(templateId),
-      'parentId': serializer.toJson<String?>(parentId),
       'name': serializer.toJson<String>(name),
       'type': serializer.toJson<String>(type),
       'config': serializer.toJson<String>(config),
@@ -482,7 +457,6 @@ class TemplateDimension extends DataClass
   TemplateDimension copyWith(
           {String? id,
           String? templateId,
-          Value<String?> parentId = const Value.absent(),
           String? name,
           String? type,
           String? config,
@@ -490,7 +464,6 @@ class TemplateDimension extends DataClass
       TemplateDimension(
         id: id ?? this.id,
         templateId: templateId ?? this.templateId,
-        parentId: parentId.present ? parentId.value : this.parentId,
         name: name ?? this.name,
         type: type ?? this.type,
         config: config ?? this.config,
@@ -501,7 +474,6 @@ class TemplateDimension extends DataClass
       id: data.id.present ? data.id.value : this.id,
       templateId:
           data.templateId.present ? data.templateId.value : this.templateId,
-      parentId: data.parentId.present ? data.parentId.value : this.parentId,
       name: data.name.present ? data.name.value : this.name,
       type: data.type.present ? data.type.value : this.type,
       config: data.config.present ? data.config.value : this.config,
@@ -514,7 +486,6 @@ class TemplateDimension extends DataClass
     return (StringBuffer('TemplateDimension(')
           ..write('id: $id, ')
           ..write('templateId: $templateId, ')
-          ..write('parentId: $parentId, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('config: $config, ')
@@ -525,14 +496,13 @@ class TemplateDimension extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(id, templateId, parentId, name, type, config, sortOrder);
+      Object.hash(id, templateId, name, type, config, sortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is TemplateDimension &&
           other.id == this.id &&
           other.templateId == this.templateId &&
-          other.parentId == this.parentId &&
           other.name == this.name &&
           other.type == this.type &&
           other.config == this.config &&
@@ -542,7 +512,6 @@ class TemplateDimension extends DataClass
 class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
   final Value<String> id;
   final Value<String> templateId;
-  final Value<String?> parentId;
   final Value<String> name;
   final Value<String> type;
   final Value<String> config;
@@ -551,7 +520,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
   const TemplateDimensionsCompanion({
     this.id = const Value.absent(),
     this.templateId = const Value.absent(),
-    this.parentId = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
     this.config = const Value.absent(),
@@ -561,7 +529,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
   TemplateDimensionsCompanion.insert({
     required String id,
     required String templateId,
-    this.parentId = const Value.absent(),
     required String name,
     required String type,
     required String config,
@@ -576,7 +543,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
   static Insertable<TemplateDimension> custom({
     Expression<String>? id,
     Expression<String>? templateId,
-    Expression<String>? parentId,
     Expression<String>? name,
     Expression<String>? type,
     Expression<String>? config,
@@ -586,7 +552,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (templateId != null) 'template_id': templateId,
-      if (parentId != null) 'parent_id': parentId,
       if (name != null) 'name': name,
       if (type != null) 'type': type,
       if (config != null) 'config': config,
@@ -598,7 +563,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
   TemplateDimensionsCompanion copyWith(
       {Value<String>? id,
       Value<String>? templateId,
-      Value<String?>? parentId,
       Value<String>? name,
       Value<String>? type,
       Value<String>? config,
@@ -607,7 +571,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
     return TemplateDimensionsCompanion(
       id: id ?? this.id,
       templateId: templateId ?? this.templateId,
-      parentId: parentId ?? this.parentId,
       name: name ?? this.name,
       type: type ?? this.type,
       config: config ?? this.config,
@@ -624,9 +587,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
     }
     if (templateId.present) {
       map['template_id'] = Variable<String>(templateId.value);
-    }
-    if (parentId.present) {
-      map['parent_id'] = Variable<String>(parentId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -651,7 +611,6 @@ class TemplateDimensionsCompanion extends UpdateCompanion<TemplateDimension> {
     return (StringBuffer('TemplateDimensionsCompanion(')
           ..write('id: $id, ')
           ..write('templateId: $templateId, ')
-          ..write('parentId: $parentId, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('config: $config, ')
@@ -2667,7 +2626,6 @@ typedef $$TemplateDimensionsTableCreateCompanionBuilder
     = TemplateDimensionsCompanion Function({
   required String id,
   required String templateId,
-  Value<String?> parentId,
   required String name,
   required String type,
   required String config,
@@ -2678,7 +2636,6 @@ typedef $$TemplateDimensionsTableUpdateCompanionBuilder
     = TemplateDimensionsCompanion Function({
   Value<String> id,
   Value<String> templateId,
-  Value<String?> parentId,
   Value<String> name,
   Value<String> type,
   Value<String> config,
@@ -2701,22 +2658,6 @@ final class $$TemplateDimensionsTableReferences extends BaseReferences<
     final manager = $$TemplatesTableTableManager($_db, $_db.templates)
         .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_templateIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-
-  static $TemplateDimensionsTable _parentIdTable(_$AppDatabase db) =>
-      db.templateDimensions.createAlias($_aliasNameGenerator(
-          db.templateDimensions.parentId, db.templateDimensions.id));
-
-  $$TemplateDimensionsTableProcessedTableManager? get parentId {
-    final $_column = $_itemColumn<String>('parent_id');
-    if ($_column == null) return null;
-    final manager =
-        $$TemplateDimensionsTableTableManager($_db, $_db.templateDimensions)
-            .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_parentIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
@@ -2812,26 +2753,6 @@ class $$TemplateDimensionsTableFilterComposer
             $$TemplatesTableFilterComposer(
               $db: $db,
               $table: $db.templates,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$TemplateDimensionsTableFilterComposer get parentId {
-    final $$TemplateDimensionsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.parentId,
-        referencedTable: $db.templateDimensions,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$TemplateDimensionsTableFilterComposer(
-              $db: $db,
-              $table: $db.templateDimensions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -2951,26 +2872,6 @@ class $$TemplateDimensionsTableOrderingComposer
             ));
     return composer;
   }
-
-  $$TemplateDimensionsTableOrderingComposer get parentId {
-    final $$TemplateDimensionsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.parentId,
-        referencedTable: $db.templateDimensions,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$TemplateDimensionsTableOrderingComposer(
-              $db: $db,
-              $table: $db.templateDimensions,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
 }
 
 class $$TemplateDimensionsTableAnnotationComposer
@@ -3014,27 +2915,6 @@ class $$TemplateDimensionsTableAnnotationComposer
               $removeJoinBuilderFromRootComposer:
                   $removeJoinBuilderFromRootComposer,
             ));
-    return composer;
-  }
-
-  $$TemplateDimensionsTableAnnotationComposer get parentId {
-    final $$TemplateDimensionsTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.parentId,
-            referencedTable: $db.templateDimensions,
-            getReferencedColumn: (t) => t.id,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$TemplateDimensionsTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.templateDimensions,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
     return composer;
   }
 
@@ -3120,7 +3000,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
     TemplateDimension,
     PrefetchHooks Function(
         {bool templateId,
-        bool parentId,
         bool instanceValuesRefs,
         bool instanceHiddenDimensionsRefs,
         bool templateThumbnailFieldsRefs})> {
@@ -3139,7 +3018,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> templateId = const Value.absent(),
-            Value<String?> parentId = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<String> type = const Value.absent(),
             Value<String> config = const Value.absent(),
@@ -3149,7 +3027,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
               TemplateDimensionsCompanion(
             id: id,
             templateId: templateId,
-            parentId: parentId,
             name: name,
             type: type,
             config: config,
@@ -3159,7 +3036,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String templateId,
-            Value<String?> parentId = const Value.absent(),
             required String name,
             required String type,
             required String config,
@@ -3169,7 +3045,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
               TemplateDimensionsCompanion.insert(
             id: id,
             templateId: templateId,
-            parentId: parentId,
             name: name,
             type: type,
             config: config,
@@ -3184,7 +3059,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
               .toList(),
           prefetchHooksCallback: (
               {templateId = false,
-              parentId = false,
               instanceValuesRefs = false,
               instanceHiddenDimensionsRefs = false,
               templateThumbnailFieldsRefs = false}) {
@@ -3216,17 +3090,6 @@ class $$TemplateDimensionsTableTableManager extends RootTableManager<
                         ._templateIdTable(db),
                     referencedColumn: $$TemplateDimensionsTableReferences
                         ._templateIdTable(db)
-                        .id,
-                  ) as T;
-                }
-                if (parentId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.parentId,
-                    referencedTable:
-                        $$TemplateDimensionsTableReferences._parentIdTable(db),
-                    referencedColumn: $$TemplateDimensionsTableReferences
-                        ._parentIdTable(db)
                         .id,
                   ) as T;
                 }
@@ -3294,7 +3157,6 @@ typedef $$TemplateDimensionsTableProcessedTableManager = ProcessedTableManager<
     TemplateDimension,
     PrefetchHooks Function(
         {bool templateId,
-        bool parentId,
         bool instanceValuesRefs,
         bool instanceHiddenDimensionsRefs,
         bool templateThumbnailFieldsRefs})>;
