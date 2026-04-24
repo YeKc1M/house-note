@@ -26,6 +26,7 @@ class HouseNoteApp extends StatelessWidget {
 
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider.value(value: database),
         RepositoryProvider.value(value: templateRepo),
         RepositoryProvider.value(value: instanceRepo),
       ],
