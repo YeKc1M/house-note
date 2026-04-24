@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
@@ -17,8 +18,13 @@ class DefaultTemplateLoader {
         .getSingleOrNull();
     if (existing != null) return;
 
-    await _loadAndInsert();
+    try {
+      await _loadAndInsert();
+    } catch (e) {
+      debugPrint('DefaultTemplateLoader error: $e');
+    }
 
+    // Always set the flag so we don't retry on every launch
     await _db.into(_db.appSettings).insert(
           AppSettingsCompanion.insert(
             key: 'default_templates_initialized',
@@ -28,7 +34,12 @@ class DefaultTemplateLoader {
   }
 
   Future<int> restoreDefaults() async {
-    return _loadAndInsert(skipExisting: true);
+    try {
+      return await _loadAndInsert(skipExisting: true);
+    } catch (e) {
+      debugPrint('DefaultTemplateLoader restore error: $e');
+      return 0;
+    }
   }
 
   Future<int> _loadAndInsert({bool skipExisting = false}) async {
