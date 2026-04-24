@@ -209,14 +209,7 @@ void main() {
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
-      // Add sub-dimension group: 通勤
-      await tester.tap(find.text('添加子维度组'));
-      await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(0), '通勤');
-      await tester.tap(find.text('保存').last);
-      await tester.pumpAndSettle();
-
-      // Add child dimension under 通勤: 是否靠近地铁站
+      // Add dimension: 是否靠近地铁站 (single_choice)
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '是否靠近地铁站');
@@ -226,7 +219,7 @@ void main() {
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
-      // Add child dimension under 通勤: 上班通勤 (text)
+      // Add dimension: 上班通勤 (text)
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '上班通勤');
@@ -272,17 +265,17 @@ void main() {
 
       // Pre-create templates directly in DB
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
-        _dim('d5', null, '楼层', 'number', '{}'),
-        _dim('d6', null, '户型', 'text', '{}'),
+        _dim('d4', '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', '楼层', 'number', '{}'),
+        _dim('d6', '户型', 'text', '{}'),
       ]);
       final apartmentTemplateId = await _insertTemplate(db, '公寓模板', [
-        _dim('d7', null, '租金', 'number', '{}'),
+        _dim('d7', '租金', 'number', '{}'),
       ]);
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '位置', 'text', '{}'),
-        _dim('d3', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"$houseTemplateId"}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '位置', 'text', '{}'),
+        _dim('d3', '房子列表', 'ref_subtemplate', '{"ref_template_id":"$houseTemplateId"}'),
       ]);
 
       // Navigate to 模板 tab
@@ -349,14 +342,14 @@ void main() {
 
       // Pre-create templates directly in DB for speed
       final templateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '位置', 'text', '{}'),
-        _dim('d3', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '位置', 'text', '{}'),
+        _dim('d3', '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
       ]);
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
-        _dim('d5', null, '楼层', 'number', '{}'),
-        _dim('d6', null, '户型', 'text', '{}'),
+        _dim('d4', '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', '楼层', 'number', '{}'),
+        _dim('d6', '户型', 'text', '{}'),
       ]);
       // Update ref_subtemplate to point to actual house template ID
       await (db.update(db.templateDimensions)..where((td) => td.id.equals('d3')))
@@ -440,8 +433,8 @@ void main() {
 
       // Pre-create template and instance
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
-        _dim('d5', null, '楼层', 'number', '{}'),
+        _dim('d4', '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', '楼层', 'number', '{}'),
       ]);
       final instanceId = await _insertInstance(db, houseTemplateId, null, '7栋-1203', {
         'd4': '南',
@@ -519,7 +512,7 @@ void main() {
 
       // Pre-create template and instance
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d4', '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
       ]);
       await _insertInstance(db, houseTemplateId, null, '测试房', {'d4': '南'});
 
@@ -607,15 +600,15 @@ void main() {
       await tester.pumpAndSettle();
 
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
       ]);
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d3', null, '朝向', 'single_choice', '{"options":["东","南"]}'),
-        _dim('d4', null, '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
+        _dim('d3', '朝向', 'single_choice', '{"options":["东","南"]}'),
+        _dim('d4', '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
       ]);
       final roomTemplateId = await _insertTemplate(db, '房间模板', [
-        _dim('d5', null, '面积', 'number', '{}'),
+        _dim('d5', '面积', 'number', '{}'),
       ]);
       // Fix refs to actual IDs
       await (db.update(db.templateDimensions)..where((td) => td.id.equals('d2')))
@@ -667,14 +660,14 @@ void main() {
 
       // Pre-create templates with dimensions in DB
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '位置', 'text', '{}'),
-        _dim('d3', null, '地铁', 'single_choice', '{"options":["是","否"]}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '位置', 'text', '{}'),
+        _dim('d3', '地铁', 'single_choice', '{"options":["是","否"]}'),
       ]);
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d4', null, '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
-        _dim('d5', null, '楼层', 'number', '{}'),
-        _dim('d6', null, '户型', 'text', '{}'),
+        _dim('d4', '朝向', 'single_choice', '{"options":["东","南","西","北"]}'),
+        _dim('d5', '楼层', 'number', '{}'),
+        _dim('d6', '户型', 'text', '{}'),
       ]);
 
       // Insert ref_subtemplate on community template
@@ -800,15 +793,15 @@ void main() {
 
       // Pre-create a 3-level hierarchy directly in DB
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
       ]);
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d3', null, '朝向', 'single_choice', '{"options":["东","南"]}'),
-        _dim('d4', null, '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
+        _dim('d3', '朝向', 'single_choice', '{"options":["东","南"]}'),
+        _dim('d4', '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
       ]);
       final roomTemplateId = await _insertTemplate(db, '房间模板', [
-        _dim('d5', null, '面积', 'number', '{}'),
+        _dim('d5', '面积', 'number', '{}'),
       ]);
       // Fix refs to actual IDs
       await (db.update(db.templateDimensions)..where((td) => td.id.equals('d2')))
@@ -856,15 +849,15 @@ void main() {
 
       // Pre-create a 3-level hierarchy directly in DB
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
-        _dim('d1', null, '小区名', 'text', '{}'),
-        _dim('d2', null, '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
+        _dim('d1', '小区名', 'text', '{}'),
+        _dim('d2', '房子列表', 'ref_subtemplate', '{"ref_template_id":"house_tpl"}'),
       ]);
       final houseTemplateId = await _insertTemplate(db, '房子模板', [
-        _dim('d3', null, '朝向', 'single_choice', '{"options":["东","南"]}'),
-        _dim('d4', null, '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
+        _dim('d3', '朝向', 'single_choice', '{"options":["东","南"]}'),
+        _dim('d4', '房间列表', 'ref_subtemplate', '{"ref_template_id":"room_tpl"}'),
       ]);
       final roomTemplateId = await _insertTemplate(db, '房间模板', [
-        _dim('d5', null, '面积', 'number', '{}'),
+        _dim('d5', '面积', 'number', '{}'),
       ]);
       // Fix refs to actual IDs
       await (db.update(db.templateDimensions)..where((td) => td.id.equals('d2')))
@@ -1063,7 +1056,6 @@ void main() {
 
 TemplateDimensionsCompanion _dim(
   String id,
-  String? parentId,
   String name,
   String type,
   String config,
@@ -1071,7 +1063,6 @@ TemplateDimensionsCompanion _dim(
   return TemplateDimensionsCompanion(
     id: Value(id),
     templateId: const Value(''),
-    parentId: Value(parentId),
     name: Value(name),
     type: Value(type),
     config: Value(config),
@@ -1096,7 +1087,6 @@ Future<String> _insertTemplate(AppDatabase db, String name, List<TemplateDimensi
       TemplateDimensionsCompanion(
         id: d.id,
         templateId: Value(id),
-        parentId: d.parentId,
         name: d.name,
         type: d.type,
         config: d.config,

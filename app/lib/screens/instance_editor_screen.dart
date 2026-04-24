@@ -80,9 +80,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
                 ..._buildDimensionFields(context, state.dimensions, state),
                 if (state.dimensions.isNotEmpty &&
                     state.dimensions.every(
-                      (d) =>
-                          state.hiddenDimensionIds.contains(d.id) ||
-                          _allChildrenHidden(d, state.hiddenDimensionIds),
+                      (d) => state.hiddenDimensionIds.contains(d.id),
                     ))
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -123,12 +121,6 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
     );
   }
 
-  bool _allChildrenHidden(DimensionNode node, Set<String> hidden) {
-    if (!hidden.contains(node.id)) return false;
-    if (node.children.isEmpty) return true;
-    return node.children.every((c) => _allChildrenHidden(c, hidden));
-  }
-
   List<Widget> _buildDimensionFields(
     BuildContext context,
     List<DimensionNode> nodes,
@@ -137,23 +129,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
     final widgets = <Widget>[];
     for (final node in nodes) {
       if (state.hiddenDimensionIds.contains(node.id)) continue;
-      if (node.type == 'group') {
-        widgets.add(
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(node.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ..._buildDimensionFields(context, node.children, state),
-                ],
-              ),
-            ),
-          ),
-        );
-      } else if (node.type == 'ref_subtemplate') {
+      if (node.type == 'ref_subtemplate') {
         final children = state.childInstances[node.id] ?? [];
         widgets.add(
           _buildRefSubtemplateCard(context, node, children),
@@ -467,8 +443,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
   ) {
     final cubit = context.read<InstanceEditorCubit>();
     final hidden = state.dimensions
-        .expand((n) => n.flatten())
-        .where((f) => state.hiddenDimensionIds.contains(f.node.id))
+        .where((d) => state.hiddenDimensionIds.contains(d.id))
         .toList();
 
     showDialog(
@@ -481,7 +456,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
             shrinkWrap: true,
             itemCount: hidden.length,
             itemBuilder: (_, index) {
-              final node = hidden[index].node;
+              final node = hidden[index];
               return ListTile(
                 title: Text(node.name),
                 trailing: TextButton(

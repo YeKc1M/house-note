@@ -5,7 +5,6 @@ import '../../data/database.dart';
 import '../../data/instance_repository.dart';
 import '../../data/template_repository.dart';
 import '../../models/dimension_node.dart';
-import '../../utils/dimension_tree_builder.dart';
 import 'state.dart';
 
 export 'state.dart';
@@ -61,11 +60,18 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
     if (_templateRepo == null) return;
     final template = await _templateRepo!.getTemplateById(templateId);
     if (template == null) return;
-    final tree = buildDimensionTree(template.dimensions);
+    final dims = template.dimensions.map((d) => DimensionNode(
+      id: d.id,
+      templateId: d.templateId,
+      name: d.name,
+      type: d.type,
+      config: d.config,
+      sortOrder: d.sortOrder,
+    )).toList();
     emit(InstanceEditorState(
       templateId: templateId,
       parentInstanceId: parentInstanceId,
-      dimensions: tree,
+      dimensions: dims,
       dimensionValues: {for (final d in template.dimensions) d.id: ''},
       hiddenDimensionIds: const {},
       customFields: const [],
@@ -77,7 +83,16 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
     final data = await _instanceRepo!.getInstanceById(instanceId);
     if (data == null) return;
     final template = await _templateRepo!.getTemplateById(data.instance.templateId);
-    final tree = template != null ? buildDimensionTree(template.dimensions) : <DimensionNode>[];
+    final dims = template != null
+        ? template.dimensions.map((d) => DimensionNode(
+            id: d.id,
+            templateId: d.templateId,
+            name: d.name,
+            type: d.type,
+            config: d.config,
+            sortOrder: d.sortOrder,
+          )).toList()
+        : <DimensionNode>[];
     final values = {for (final v in data.values) v.dimensionId: v.value};
     final hidden = data.hiddenDimensions.map((h) => h.dimensionId).toSet();
     final custom = data.customFields.map((f) => CustomFieldData(
@@ -92,7 +107,7 @@ class InstanceEditorCubit extends Cubit<InstanceEditorState> {
       name: data.instance.name,
       templateId: data.instance.templateId,
       parentInstanceId: data.instance.parentInstanceId,
-      dimensions: tree,
+      dimensions: dims,
       dimensionValues: {for (final d in template?.dimensions ?? []) d.id: values[d.id] ?? ''},
       hiddenDimensionIds: hidden,
       customFields: custom,

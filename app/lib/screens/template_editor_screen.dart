@@ -83,8 +83,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     spacing: 8,
                     children: state.thumbnailDimensionIds.asMap().entries.map((e) {
                       final dim = state.dimensions
-                          .expand((n) => n.flatten())
-                          .map((f) => f.node)
                           .firstWhereOrNull((n) => n.id == e.value);
                       if (dim == null) return const SizedBox.shrink();
                       return Chip(
@@ -104,11 +102,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                   nodes: state.dimensions,
                   onEdit: (node) => _showDimensionDialog(context, node: node),
                   onDelete: (id) => context.read<TemplateEditorCubit>().removeDimension(id),
-                  onReorder: (oldIndex, newIndex, parentId) =>
+                  onReorder: (oldIndex, newIndex) =>
                       context.read<TemplateEditorCubit>().moveDimension(
                         oldIndex: oldIndex,
                         newIndex: newIndex,
-                        targetParentId: parentId,
                       ),
                   thumbnailDimensionIds: state.thumbnailDimensionIds.toSet(),
                   onToggleThumbnail: (id) => context.read<TemplateEditorCubit>().toggleThumbnailDimension(id),
@@ -121,11 +118,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                       onPressed: () => _showDimensionDialog(context),
                       icon: const Icon(Icons.add),
                       label: const Text('添加维度项'),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showDimensionDialog(context, initialType: 'group'),
-                      icon: const Icon(Icons.folder),
-                      label: const Text('添加子维度组'),
                     ),
                   ],
                 ),
@@ -290,7 +282,6 @@ class _DimensionDialogState extends State<_DimensionDialog> {
                 DropdownMenuItem(value: 'text', child: Text('文本')),
                 DropdownMenuItem(value: 'single_choice', child: Text('单选')),
                 DropdownMenuItem(value: 'number', child: Text('数字')),
-                DropdownMenuItem(value: 'group', child: Text('子维度组')),
                 DropdownMenuItem(value: 'ref_subtemplate', child: Text('引用子模板')),
               ],
               onChanged: (v) {

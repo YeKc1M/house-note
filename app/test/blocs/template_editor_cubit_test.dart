@@ -83,60 +83,20 @@ void main() {
     );
 
     blocTest<TemplateEditorCubit, TemplateEditorState>(
-      'moves dimension at root level with flat list divergence',
+      'moveDimension reorders dimensions',
       build: () => TemplateEditorCubit(repo),
       seed: () => const TemplateEditorState(
         dimensions: [
-          DimensionNode(
-            id: 'g',
-            templateId: '',
-            name: 'Group',
-            type: 'group',
-            children: [
-              DimensionNode(id: 'c1', templateId: '', parentId: 'g', name: 'C1', type: 'text'),
-            ],
-          ),
           DimensionNode(id: 'a', templateId: '', name: 'A', type: 'text'),
+          DimensionNode(id: 'b', templateId: '', name: 'B', type: 'text'),
         ],
       ),
       act: (cubit) => cubit.moveDimension(oldIndex: 0, newIndex: 1),
       expect: () => [
         predicate<TemplateEditorState>((s) {
           return s.dimensions.length == 2 &&
-              s.dimensions[0].id == 'a' &&
-              s.dimensions[0].parentId == null &&
-              s.dimensions[1].id == 'g' &&
-              s.dimensions[1].parentId == null &&
-              s.dimensions[1].children.length == 1;
-        }),
-      ],
-    );
-
-    blocTest<TemplateEditorCubit, TemplateEditorState>(
-      'moves dimension into group at specified child index',
-      build: () => TemplateEditorCubit(repo),
-      seed: () => const TemplateEditorState(
-        templateName: 'T',
-        dimensions: [
-          DimensionNode(
-            id: 'g',
-            templateId: '',
-            name: 'Group',
-            type: 'group',
-            children: [
-              DimensionNode(id: 'c1', templateId: '', parentId: 'g', name: 'C1', type: 'text'),
-            ],
-          ),
-          DimensionNode(id: 'd', templateId: '', name: 'Dim', type: 'text'),
-        ],
-      ),
-      act: (cubit) => cubit.moveDimension(oldIndex: 2, newIndex: 0, targetParentId: 'g'),
-      expect: () => [
-        predicate<TemplateEditorState>((s) {
-          final group = s.dimensions.firstWhere((d) => d.id == 'g');
-          return group.children.length == 2 &&
-              group.children[0].id == 'd' &&
-              group.children[1].id == 'c1';
+              s.dimensions[0].id == 'b' &&
+              s.dimensions[1].id == 'a';
         }),
       ],
     );
@@ -148,8 +108,8 @@ void main() {
         when(() => repo.getTemplateById('t1')).thenAnswer((_) async => TemplateWithDimensions(
           Template(id: 't1', name: 'T', createdAt: 0, updatedAt: 0),
           [
-            TemplateDimension(id: 'd1', templateId: 't1', parentId: null, name: 'A', type: 'text', config: '{}', sortOrder: 0),
-            TemplateDimension(id: 'd2', templateId: 't1', parentId: null, name: 'B', type: 'text', config: '{}', sortOrder: 1),
+            TemplateDimension(id: 'd1', templateId: 't1', name: 'A', type: 'text', config: '{}', sortOrder: 0),
+            TemplateDimension(id: 'd2', templateId: 't1', name: 'B', type: 'text', config: '{}', sortOrder: 1),
           ],
         ));
         when(() => repo.getThumbnailFields('t1')).thenAnswer((_) async => [
@@ -235,7 +195,7 @@ void main() {
       setUp: () {
         when(() => repo.getTemplateById('t1')).thenAnswer((_) async => TemplateWithDimensions(
           Template(id: 't1', name: 'Old', createdAt: 0, updatedAt: 0),
-          [TemplateDimension(id: 'd1', templateId: 't1', parentId: null, name: 'A', type: 'text', config: '{}', sortOrder: 0)],
+          [TemplateDimension(id: 'd1', templateId: 't1', name: 'A', type: 'text', config: '{}', sortOrder: 0)],
         ));
         when(() => repo.getThumbnailFields('t1')).thenAnswer((_) async => [
           TemplateThumbnailField(id: 'f1', templateId: 't1', dimensionId: 'd1', sortOrder: 0),
@@ -275,39 +235,6 @@ void main() {
       ),
       act: (cubit) => cubit.moveDimension(oldIndex: 5, newIndex: 0),
       expect: () => [],
-    );
-
-    blocTest<TemplateEditorCubit, TemplateEditorState>(
-      'addDimension into nested group',
-      build: () => TemplateEditorCubit(repo),
-      seed: () => const TemplateEditorState(
-        dimensions: [
-          DimensionNode(
-            id: 'g1',
-            templateId: '',
-            name: 'Group1',
-            type: 'group',
-            children: [
-              DimensionNode(
-                id: 'g2',
-                templateId: '',
-                parentId: 'g1',
-                name: 'Group2',
-                type: 'group',
-                children: [],
-              ),
-            ],
-          ),
-        ],
-      ),
-      act: (cubit) => cubit.addDimension(name: 'Nested', type: 'text', parentId: 'g2'),
-      expect: () => [
-        predicate<TemplateEditorState>((s) {
-          final g1 = s.dimensions.firstWhere((d) => d.id == 'g1');
-          final g2 = g1.children.firstWhere((d) => d.id == 'g2');
-          return g2.children.length == 1 && g2.children.first.name == 'Nested';
-        }),
-      ],
     );
   });
 }

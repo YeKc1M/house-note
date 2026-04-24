@@ -13,7 +13,6 @@ class Templates extends Table {
 class TemplateDimensions extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text().references(Templates, #id, onDelete: KeyAction.cascade)();
-  TextColumn get parentId => text().nullable().references(TemplateDimensions, #id)();
   TextColumn get name => text()();
   TextColumn get type => text()();
   TextColumn get config => text()();
