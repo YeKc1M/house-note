@@ -1210,7 +1210,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       // Select 是 for 民水民电
-      await tester.tap(find.widgetWithText(ChoiceChip, '是'));
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(ListTile, '民水民电'),
+          matching: find.widgetWithText(ChoiceChip, '是'),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.save));
       await tester.pumpAndSettle();
