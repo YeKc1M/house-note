@@ -5,7 +5,7 @@ class DimensionTree extends StatelessWidget {
   final List<DimensionNode> nodes;
   final void Function(DimensionNode) onEdit;
   final void Function(String) onDelete;
-  final void Function(int oldIndex, int newIndex, String? targetParentId) onReorder;
+  final void Function(int oldIndex, int newIndex) onReorder;
   final Set<String> thumbnailDimensionIds;
   final void Function(String) onToggleThumbnail;
 
@@ -21,38 +21,35 @@ class DimensionTree extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final flat = nodes.expand((n) => n.flatten()).toList();
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: flat.length,
+      itemCount: nodes.length,
       onReorder: (oldIndex, newIndex) {
         if (newIndex > oldIndex) newIndex--;
-        final target = flat[newIndex];
-        final targetParentId = target.node.type == 'group' ? target.node.id : target.node.parentId;
-        onReorder(oldIndex, newIndex, targetParentId);
+        onReorder(oldIndex, newIndex);
       },
       itemBuilder: (context, index) {
-        final item = flat[index];
+        final node = nodes[index];
         return ListTile(
-          key: ValueKey(item.node.id),
-          contentPadding: EdgeInsets.only(left: 24.0 + item.depth * 24.0, right: 16.0),
+          key: ValueKey(node.id),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           leading: const Icon(Icons.drag_handle),
-          title: Text('${item.node.name} (${item.node.type})'),
+          title: Text('${node.name} (${node.type})'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: Icon(
-                  thumbnailDimensionIds.contains(item.node.id)
+                  thumbnailDimensionIds.contains(node.id)
                       ? Icons.visibility
                       : Icons.visibility_off,
                 ),
                 tooltip: '缩略图显示',
-                onPressed: () => onToggleThumbnail(item.node.id),
+                onPressed: () => onToggleThumbnail(node.id),
               ),
-              IconButton(icon: const Icon(Icons.edit), onPressed: () => onEdit(item.node)),
-              IconButton(icon: const Icon(Icons.delete), onPressed: () => onDelete(item.node.id)),
+              IconButton(icon: const Icon(Icons.edit), onPressed: () => onEdit(node)),
+              IconButton(icon: const Icon(Icons.delete), onPressed: () => onDelete(node.id)),
             ],
           ),
         );
