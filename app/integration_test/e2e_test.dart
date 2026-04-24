@@ -209,14 +209,7 @@ void main() {
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
-      // Add sub-dimension group: 通勤
-      await tester.tap(find.text('添加子维度组'));
-      await tester.pumpAndSettle();
-      await tester.enterText(dialogTextField(0), '通勤');
-      await tester.tap(find.text('保存').last);
-      await tester.pumpAndSettle();
-
-      // Add child dimension under 通勤: 是否靠近地铁站
+      // Add dimension: 是否靠近地铁站 (single_choice)
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '是否靠近地铁站');
@@ -226,7 +219,7 @@ void main() {
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
-      // Add child dimension under 通勤: 上班通勤 (text)
+      // Add dimension: 上班通勤 (text)
       await tester.tap(find.text('添加维度项'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogTextField(0), '上班通勤');
