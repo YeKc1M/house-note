@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../blocs/tutorial/cubit.dart';
-import '../models/tutorial_step.dart';
 import 'tutorial_steps.dart';
 
 class TutorialRouteObserver extends RouteObserver<PageRoute<dynamic>> {
@@ -27,44 +26,21 @@ class TutorialRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   }) {
     if (!cubit.state.isActive) return;
 
-    final steps = getTutorialSteps();
     final index = cubit.state.currentStepIndex;
-    if (index < 0 || index >= steps.length) return;
+    if (index < 0 || index >= tutorialSteps.length) return;
 
-    final currentStep = steps[index];
+    final currentStep = tutorialSteps[index];
     final newRouteName = isPop ? previousRoute?.settings.name : route.settings.name;
 
-    // Steps that advance on push to a specific route
-    final pushAdvances = <String, String>{
-      'create_first_template': '/templateEditor',
-      'create_second_template': '/templateEditor',
-      'create_instance': '/instanceEditor',
-      'create_child_instance': '/instanceEditor',
-      'create_another_child': '/instanceEditor',
-      'navigate_into_instance': '/instanceEditor',
-    };
-
-    // Steps that advance on pop to a specific route
-    final popAdvances = <String, String>{
-      'save_template': '/',
-    };
-
-    final expectedRoute = isPop ? popAdvances[currentStep.id] : pushAdvances[currentStep.id];
+    final expectedRoute = isPop ? currentStep.expectedRoute : currentStep.expectedRoute;
 
     if (expectedRoute != null && expectedRoute == newRouteName) {
       cubit.nextStep();
       return;
     }
 
-    // Dialog-based advances (add_dimension opens a dialog, not a named route)
-    if (!isPop && route is DialogRoute) {
-      final dialogAdvances = <String>{
-        'add_dimension',
-        'add_more_dimensions',
-      };
-      if (dialogAdvances.contains(currentStep.id)) {
-        cubit.nextStep();
-      }
+    if (!isPop && route is DialogRoute && currentStep.advanceOnDialog) {
+      cubit.nextStep();
     }
   }
 }

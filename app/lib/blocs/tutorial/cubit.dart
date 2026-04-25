@@ -6,6 +6,9 @@ import 'state.dart';
 
 export 'state.dart';
 
+const _kTutorialActive = 'tutorial_was_active';
+const _kTutorialLastStep = 'tutorial_last_step';
+
 class TutorialCubit extends Cubit<TutorialState> {
   final SharedPreferences _prefs;
   final AppDatabase _db;
@@ -14,31 +17,28 @@ class TutorialCubit extends Cubit<TutorialState> {
 
   void startTutorial() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    emit(state.copyWith(
+    emit(TutorialState(
       isActive: true,
       currentStepIndex: 0,
       startTimestamp: timestamp,
-      showExitDialog: false,
-      createdTemplateIds: {},
-      createdInstanceIds: {},
     ));
-    _prefs.setBool('tutorial_was_active', true);
-    _prefs.setInt('tutorial_last_step', 0);
+    _prefs.setBool(_kTutorialActive, true);
+    _prefs.setInt(_kTutorialLastStep, 0);
   }
 
   void nextStep() {
     final nextIndex = state.currentStepIndex + 1;
-    if (nextIndex >= getTutorialSteps().length) {
+    if (nextIndex >= tutorialSteps.length) {
       completeTutorial();
       return;
     }
     emit(state.copyWith(currentStepIndex: nextIndex));
-    _prefs.setInt('tutorial_last_step', nextIndex);
+    _prefs.setInt(_kTutorialLastStep, nextIndex);
   }
 
   void goToStep(int index) {
     emit(state.copyWith(currentStepIndex: index));
-    _prefs.setInt('tutorial_last_step', index);
+    _prefs.setInt(_kTutorialLastStep, index);
   }
 
   void showExitDialog() {
@@ -50,14 +50,11 @@ class TutorialCubit extends Cubit<TutorialState> {
   }
 
   void completeTutorial() {
-    emit(const TutorialState());
-    _prefs.setBool('tutorial_was_active', false);
-    _prefs.setInt('tutorial_last_step', 0);
+    _reset();
   }
 
   void exitWithoutCleanup() {
-    emit(const TutorialState(showExitDialog: false));
-    _prefs.setBool('tutorial_was_active', false);
+    _reset();
   }
 
   Future<void> exitAndCleanup() async {
@@ -72,17 +69,12 @@ class TutorialCubit extends Cubit<TutorialState> {
         [timestamp],
       );
     }
-    emit(const TutorialState(showExitDialog: false));
-    _prefs.setBool('tutorial_was_active', false);
+    _reset();
   }
 
-  void recordTemplateId(String id) {
-    final ids = {...state.createdTemplateIds, id};
-    emit(state.copyWith(createdTemplateIds: ids));
-  }
-
-  void recordInstanceId(String id) {
-    final ids = {...state.createdInstanceIds, id};
-    emit(state.copyWith(createdInstanceIds: ids));
+  void _reset() {
+    emit(const TutorialState());
+    _prefs.setBool(_kTutorialActive, false);
+    _prefs.setInt(_kTutorialLastStep, 0);
   }
 }

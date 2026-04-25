@@ -5,16 +5,12 @@ class TutorialState extends Equatable {
   final int currentStepIndex;
   final int? startTimestamp;
   final bool showExitDialog;
-  final Set<String> createdTemplateIds;
-  final Set<String> createdInstanceIds;
 
   const TutorialState({
     this.isActive = false,
     this.currentStepIndex = 0,
     this.startTimestamp,
     this.showExitDialog = false,
-    this.createdTemplateIds = const {},
-    this.createdInstanceIds = const {},
   });
 
   TutorialState copyWith({
@@ -22,16 +18,12 @@ class TutorialState extends Equatable {
     int? currentStepIndex,
     int? startTimestamp,
     bool? showExitDialog,
-    Set<String>? createdTemplateIds,
-    Set<String>? createdInstanceIds,
   }) {
     return TutorialState(
       isActive: isActive ?? this.isActive,
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
       startTimestamp: startTimestamp ?? this.startTimestamp,
       showExitDialog: showExitDialog ?? this.showExitDialog,
-      createdTemplateIds: createdTemplateIds ?? this.createdTemplateIds,
-      createdInstanceIds: createdInstanceIds ?? this.createdInstanceIds,
     );
   }
 
@@ -41,7 +33,5 @@ class TutorialState extends Equatable {
         currentStepIndex,
         startTimestamp,
         showExitDialog,
-        createdTemplateIds,
-        createdInstanceIds,
       ];
 }

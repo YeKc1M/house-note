@@ -58,10 +58,7 @@ class HouseNoteApp extends StatelessWidget {
                   settings: settings,
                   builder: (_) => BlocProvider(
                     create: (_) => SettingsCubit(prefs),
-                    child: _MainShell(
-                      prefs: prefs,
-                      tutorialCubit: tutorialCubit,
-                    ),
+                    child: const _MainShell(),
                   ),
                 );
               case '/templateEditor':
@@ -96,13 +93,7 @@ class HouseNoteApp extends StatelessWidget {
 }
 
 class _MainShell extends StatefulWidget {
-  final SharedPreferences prefs;
-  final TutorialCubit tutorialCubit;
-
-  const _MainShell({
-    required this.prefs,
-    required this.tutorialCubit,
-  });
+  const _MainShell();
 
   @override
   State<_MainShell> createState() => _MainShellState();
@@ -112,42 +103,14 @@ class _MainShellState extends State<_MainShell> {
   int _index = 0;
   bool _dialogShown = false;
 
-  int _tabIndexForStep(String? stepId) {
-    return switch (stepId) {
-      'template_tab_intro' => 1,
-      'create_first_template' => 1,
-      'enter_template_name' => 1,
-      'add_dimension' => 1,
-      'configure_dimension' => 1,
-      'add_more_dimensions' => 1,
-      'set_thumbnail' => 1,
-      'save_template' => 1,
-      'create_second_template' => 1,
-      'configure_community_template' => 1,
-      'instance_tab_intro' => 0,
-      'create_instance' => 0,
-      'enter_instance_details' => 0,
-      'navigate_into_instance' => 0,
-      'create_child_instance' => 0,
-      'swipe_delete_child' => 0,
-      'confirm_delete_child' => 0,
-      'create_another_child' => 0,
-      'navigate_back' => 0,
-      'swipe_delete_parent' => 0,
-      'confirm_cascade_delete' => 0,
-      _ => 0,
-    };
-  }
-
   @override
   void initState() {
     super.initState();
-    final tutorialState = widget.tutorialCubit.state;
+    final tutorialState = context.read<TutorialCubit>().state;
     if (tutorialState.isActive) {
-      final steps = getTutorialSteps();
       final stepIndex = tutorialState.currentStepIndex;
-      if (stepIndex >= 0 && stepIndex < steps.length) {
-        _index = _tabIndexForStep(steps[stepIndex].id);
+      if (stepIndex >= 0 && stepIndex < tutorialSteps.length) {
+        _index = tutorialSteps[stepIndex].targetTabIndex ?? 0;
       }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorialPrompt());
@@ -177,7 +140,7 @@ class _MainShellState extends State<_MainShell> {
             onPressed: () {
               settingsCubit.markTutorialSeen();
               Navigator.pop(dialogContext);
-              widget.tutorialCubit.startTutorial();
+              context.read<TutorialCubit>().startTutorial();
             },
             child: const Text('查看教程'),
           ),
@@ -208,13 +171,11 @@ class _MainShellState extends State<_MainShell> {
           previous.currentStepIndex != current.currentStepIndex,
       listener: (context, state) {
         if (!state.isActive) return;
-        final steps = getTutorialSteps();
         if (state.currentStepIndex < 0 ||
-            state.currentStepIndex >= steps.length) {
+            state.currentStepIndex >= tutorialSteps.length) {
           return;
         }
-        final step = steps[state.currentStepIndex];
-        final targetIndex = _tabIndexForStep(step.id);
+        final targetIndex = tutorialSteps[state.currentStepIndex].targetTabIndex ?? 0;
         if (targetIndex != _index) {
           setState(() => _index = targetIndex);
         }
