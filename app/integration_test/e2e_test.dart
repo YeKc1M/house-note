@@ -9,6 +9,7 @@ import 'package:house_note/data/default_template_loader.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 
 Finder bottomNavItem(String label) {
   return find.descendant(
@@ -114,6 +115,7 @@ void main() {
     late File dbFile;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       final tempDir = Directory.systemTemp;
       dbFile = File(p.join(tempDir.path, 'e2e_test_${DateTime.now().millisecondsSinceEpoch}.db'));
       db = AppDatabase.forTesting(NativeDatabase.createInBackground(dbFile));
@@ -128,7 +130,7 @@ void main() {
 
     testWidgets('Story 1.1 - Create house template and community template with reference',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板 (Templates) tab
@@ -182,7 +184,7 @@ void main() {
       expect(templates.map((t) => t.name), contains('房子模板'));
 
       // Rebuild app to force fresh load of template list
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -251,7 +253,7 @@ void main() {
       expect(allTemplates.map((t) => t.name), containsAll(['小区模板', '房子模板']));
 
       // Rebuild app to force fresh load
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -261,7 +263,7 @@ void main() {
 
     testWidgets('Story 1.2 - Edit existing template and subtemplate reference',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates directly in DB
@@ -317,7 +319,7 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
 
       // Rebuild and verify
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -338,7 +340,7 @@ void main() {
 
     testWidgets('Story 2.1 + 2.2 - Create top-level and child instances',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates directly in DB for speed
@@ -429,7 +431,7 @@ void main() {
 
     testWidgets('Story 2.3 + 2.4 - Custom fields and hide/restore template fields',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create template and instance
@@ -508,7 +510,7 @@ void main() {
 
     testWidgets('Story 2.5 - Add custom fields of all types via tag editor',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create template and instance
@@ -597,7 +599,7 @@ void main() {
 
     testWidgets('Story 3.1 - Browse parent-child instances with breadcrumbs',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
@@ -656,7 +658,7 @@ void main() {
 
     testWidgets('Story 3.2 - Configure thumbnail fields in template editor and verify on instance cards',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates with dimensions in DB
@@ -789,7 +791,7 @@ void main() {
 
     testWidgets('Story 4.1 - Swipe to delete parent instance cascades to children',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create a 3-level hierarchy directly in DB
@@ -845,7 +847,7 @@ void main() {
 
     testWidgets('Story 4.2 - Swipe to delete child instance cascades to grandchildren',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create a 3-level hierarchy directly in DB
@@ -941,7 +943,7 @@ void main() {
         db, houseTemplateId, communityId, '7栋-1203', {'d1': '南'},
       );
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Tap edit icon on community instance card
@@ -1016,7 +1018,7 @@ void main() {
         db, houseTemplateId, communityId, '7栋-1203', {'d1': '南'},
       );
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Tap edit icon on community instance card
@@ -1057,7 +1059,7 @@ void main() {
         (WidgetTester tester) async {
       // Fresh DB + loader simulates first app launch
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板 tab
@@ -1100,12 +1102,12 @@ void main() {
           .go();
 
       // Restart app (re-pump)
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Call loader again simulating app restart
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板
@@ -1132,7 +1134,7 @@ void main() {
             ..where((t) => t.id.equals(livingRoom.id)))
           .go();
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Go to Settings and restore
@@ -1154,7 +1156,7 @@ void main() {
     testWidgets('Full instance creation flow with default templates',
         (WidgetTester tester) async {
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 首页
@@ -1280,6 +1282,45 @@ void main() {
       expect(find.text('7栋-1203'), findsOneWidget);
       expect(find.text('客厅'), findsOneWidget);
       expect(find.text('主卧'), findsOneWidget);
+    });
+
+    testWidgets('Story: First-time user sees tutorial prompt and can skip',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
+      await tester.pumpAndSettle();
+
+      // Verify welcome dialog appears
+      expect(find.text('欢迎使用 House Note'), findsOneWidget);
+      expect(find.text('这是您第一次使用。是否查看快速入门教程？'), findsOneWidget);
+
+      // Tap 查看教程
+      await tester.tap(find.text('查看教程'));
+      await tester.pumpAndSettle();
+
+      // Verify TutorialScreen opens
+      expect(find.text('快速入门'), findsOneWidget);
+      expect(find.text('欢迎来到 House Note'), findsOneWidget);
+
+      // Swipe through all pages
+      for (var i = 0; i < 6; i++) {
+        await tester.tap(find.text('下一页'));
+        await tester.pumpAndSettle();
+      }
+
+      // On last page, tap 完成
+      expect(find.text('开始记录吧'), findsOneWidget);
+      await tester.tap(find.text('完成'));
+      await tester.pumpAndSettle();
+
+      // Should be back on home screen
+      expect(find.text('首页'), findsNWidgets(2));
+
+      // Rebuild app to simulate restart
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
+      await tester.pumpAndSettle();
+
+      // Dialog should NOT appear again
+      expect(find.text('欢迎使用 House Note'), findsNothing);
     });
   });
 }

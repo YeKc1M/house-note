@@ -72,7 +72,10 @@ class HouseNoteApp extends StatelessWidget {
             case '/tutorial':
               final isFirstRun = settings.arguments == true;
               return MaterialPageRoute(
-                builder: (_) => TutorialScreen(isFirstRun: isFirstRun),
+                builder: (_) => BlocProvider(
+                  create: (_) => SettingsCubit(prefs),
+                  child: TutorialScreen(isFirstRun: isFirstRun),
+                ),
               );
           }
           return null;
