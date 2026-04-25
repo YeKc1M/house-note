@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'blocs/instance_editor/cubit.dart';
 import 'blocs/instance_list/cubit.dart';
 import 'blocs/settings/cubit.dart';
@@ -13,11 +14,13 @@ import 'screens/instance_list_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/template_editor_screen.dart';
 import 'screens/template_list_screen.dart';
+import 'screens/tutorial_screen.dart';
 
 class HouseNoteApp extends StatelessWidget {
   final AppDatabase database;
+  final SharedPreferences prefs;
 
-  const HouseNoteApp({super.key, required this.database});
+  const HouseNoteApp({super.key, required this.database, required this.prefs});
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +43,7 @@ class HouseNoteApp extends StatelessWidget {
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/':
-              return MaterialPageRoute(builder: (_) => const _MainShell());
+              return MaterialPageRoute(builder: (_) => _MainShell(prefs: prefs));
             case '/templateEditor':
               final templateId = settings.arguments as String?;
               return MaterialPageRoute(
@@ -61,6 +64,11 @@ class HouseNoteApp extends StatelessWidget {
                   ),
                 ),
               );
+            case '/tutorial':
+              final isFirstRun = settings.arguments == true;
+              return MaterialPageRoute(
+                builder: (_) => TutorialScreen(isFirstRun: isFirstRun),
+              );
           }
           return null;
         },
@@ -70,7 +78,9 @@ class HouseNoteApp extends StatelessWidget {
 }
 
 class _MainShell extends StatefulWidget {
-  const _MainShell();
+  final SharedPreferences prefs;
+
+  const _MainShell({required this.prefs});
 
   @override
   State<_MainShell> createState() => _MainShellState();
@@ -94,7 +104,7 @@ class _MainShellState extends State<_MainShell> {
         child: const TemplateListScreen(),
       ),
       BlocProvider(
-        create: (_) => SettingsCubit(),
+        create: (_) => SettingsCubit(widget.prefs),
         child: const SettingsScreen(),
       ),
     ];
