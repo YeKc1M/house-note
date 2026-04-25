@@ -63,6 +63,16 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const Divider(),
+          const ListTile(title: Text('帮助', style: TextStyle(fontWeight: FontWeight.bold))),
+          ListTile(
+            leading: const Icon(Icons.help_outline),
+            title: const Text('查看教程'),
+            subtitle: const Text('重新查看快速入门教程'),
+            onTap: () {
+              Navigator.pushNamed(context, '/tutorial', arguments: false);
+            },
+          ),
+          const Divider(),
           const ListTile(title: Text('关于', style: TextStyle(fontWeight: FontWeight.bold))),
           const ListTile(title: Text('House Note'), subtitle: Text('v0.1.0')),
         ],
