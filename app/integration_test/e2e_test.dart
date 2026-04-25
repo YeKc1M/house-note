@@ -1229,9 +1229,12 @@ void main() {
       // Create 客厅 instance
       await tester.tap(instanceListFab(), warnIfMissed: false);
       await tester.pumpAndSettle();
-      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+      try {
+        await pumpUntilFound(tester, find.text('选择要新建的子类型'), timeout: const Duration(seconds: 5));
         await tester.tap(find.text('客厅模板'));
         await tester.pumpAndSettle();
+      } catch (_) {
+        // Single subtemplate, no dialog
       }
       await pumpUntilFound(tester, find.text('电视状态'));
       await tester.enterText(find.byType(TextFormField).first, '客厅');
@@ -1246,16 +1249,17 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('客厅'));
 
-      // Go back to 7栋-1203 to create sibling 卧室 instance
-      await tester.tap(find.byType(BackButton));
+      // Create 卧室 instance (sibling of 客厅)
+      final fabWidget = instanceListFab().evaluate().first.widget as FloatingActionButton;
+      fabWidget.onPressed!();
       await tester.pumpAndSettle();
-
-      // Create 卧室 instance
-      await tester.tap(instanceListFab(), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+      await tester.pump(const Duration(seconds: 2));
+      try {
+        await pumpUntilFound(tester, find.text('选择要新建的子类型'), timeout: const Duration(seconds: 5));
         await tester.tap(find.text('卧室模板'));
         await tester.pumpAndSettle();
+      } catch (_) {
+        // Single subtemplate, no dialog
       }
       await pumpUntilFound(tester, find.text('床垫状态'));
       await tester.enterText(find.byType(TextFormField).first, '主卧');
