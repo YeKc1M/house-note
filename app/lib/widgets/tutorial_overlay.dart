@@ -41,7 +41,7 @@ class _TutorialLayerState extends State<_TutorialLayer> {
   void didUpdateWidget(_TutorialLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state.currentStepIndex != widget.state.currentStepIndex) {
-      _updateTargetRect();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _updateTargetRect());
     }
   }
 
@@ -104,16 +104,13 @@ class _TutorialLayerState extends State<_TutorialLayer> {
           IgnorePointer(
             child: Container(
               color: Colors.black.withValues(alpha: 0.75),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
             ),
           ),
 
         // Exit button - receives pointer events
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
-          right: 16,
+          left: 16,
           child: TextButton(
             onPressed: () {
               context.read<TutorialCubit>().showExitDialog();
@@ -163,7 +160,7 @@ class _TooltipCard extends StatelessWidget {
     final safePadding = MediaQuery.of(context).padding;
 
     double top;
-    const cardHeight = 180.0;
+    const cardHeight = 220.0;
 
     if (targetRect != null) {
       final targetBottom = targetRect!.bottom;
@@ -175,7 +172,8 @@ class _TooltipCard extends StatelessWidget {
         top = targetTop - cardHeight - 20;
       }
     } else {
-      top = screenSize.height * 0.3;
+      // No target - place at bottom so it doesn't block main content
+      top = screenSize.height - cardHeight - safePadding.bottom - 20;
     }
 
     top = top.clamp(
@@ -183,65 +181,87 @@ class _TooltipCard extends StatelessWidget {
       screenSize.height - cardHeight - safePadding.bottom - 10,
     );
 
+    final showNextButton = step.actionType != TutorialActionType.tap;
+
     return Positioned(
       top: top,
       left: 24,
       right: 24,
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                step.title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                step.description,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-              if (step.actionHint != null) ...[
-                const SizedBox(height: 8),
-                Row(
+      child: Stack(
+        children: [
+          // Visual card - does not block hit tests on widgets beneath
+          IgnorePointer(
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.touch_app, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
                     Text(
-                      step.actionHint!,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      step.title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      step.description,
+                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                    if (step.actionHint != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.touch_app, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            step.actionHint!,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$currentStep / $totalSteps',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        if (showNextButton)
+                          Visibility(
+                            visible: false,
+                            child: ElevatedButton(
+                              onPressed: () {},
+                              child: const Text('下一步'),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '$currentStep / $totalSteps',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  if (step.actionType != TutorialActionType.tap)
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<TutorialCubit>().nextStep();
-                      },
-                      child: const Text('下一步'),
-                    ),
-                ],
               ),
-            ],
+            ),
           ),
-        ),
+          // Interactive button overlayed at the same visual position
+          if (showNextButton)
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: ElevatedButton(
+                onPressed: () {
+                  context.read<TutorialCubit>().nextStep();
+                },
+                child: const Text('下一步'),
+              ),
+            ),
+        ],
       ),
     );
   }

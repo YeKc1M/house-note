@@ -112,9 +112,44 @@ class _MainShellState extends State<_MainShell> {
   int _index = 0;
   bool _dialogShown = false;
 
+  int _tabIndexForStep(String? stepId) {
+    return switch (stepId) {
+      'template_tab_intro' => 1,
+      'create_first_template' => 1,
+      'enter_template_name' => 1,
+      'add_dimension' => 1,
+      'configure_dimension' => 1,
+      'add_more_dimensions' => 1,
+      'set_thumbnail' => 1,
+      'save_template' => 1,
+      'create_second_template' => 1,
+      'configure_community_template' => 1,
+      'instance_tab_intro' => 0,
+      'create_instance' => 0,
+      'enter_instance_details' => 0,
+      'navigate_into_instance' => 0,
+      'create_child_instance' => 0,
+      'swipe_delete_child' => 0,
+      'confirm_delete_child' => 0,
+      'create_another_child' => 0,
+      'navigate_back' => 0,
+      'swipe_delete_parent' => 0,
+      'confirm_cascade_delete' => 0,
+      _ => 0,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
+    final tutorialState = widget.tutorialCubit.state;
+    if (tutorialState.isActive) {
+      final steps = getTutorialSteps();
+      final stepIndex = tutorialState.currentStepIndex;
+      if (stepIndex >= 0 && stepIndex < steps.length) {
+        _index = _tabIndexForStep(steps[stepIndex].id);
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorialPrompt());
   }
 
@@ -179,12 +214,8 @@ class _MainShellState extends State<_MainShell> {
           return;
         }
         final step = steps[state.currentStepIndex];
-        final targetIndex = switch (step.id) {
-          'template_tab_intro' => 1,
-          'instance_tab_intro' => 0,
-          _ => null,
-        };
-        if (targetIndex != null && targetIndex != _index) {
+        final targetIndex = _tabIndexForStep(step.id);
+        if (targetIndex != _index) {
           setState(() => _index = targetIndex);
         }
       },

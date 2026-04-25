@@ -47,15 +47,24 @@ class TutorialRouteObserver extends RouteObserver<PageRoute<dynamic>> {
     // Steps that advance on pop to a specific route
     final popAdvances = <String, String>{
       'save_template': '/',
-      'navigate_back': '/',
-      'confirm_delete_child': '/instanceEditor',
-      'confirm_cascade_delete': '/',
     };
 
     final expectedRoute = isPop ? popAdvances[currentStep.id] : pushAdvances[currentStep.id];
 
     if (expectedRoute != null && expectedRoute == newRouteName) {
       cubit.nextStep();
+      return;
+    }
+
+    // Dialog-based advances (add_dimension opens a dialog, not a named route)
+    if (!isPop && route is DialogRoute) {
+      final dialogAdvances = <String>{
+        'add_dimension',
+        'add_more_dimensions',
+      };
+      if (dialogAdvances.contains(currentStep.id)) {
+        cubit.nextStep();
+      }
     }
   }
 }

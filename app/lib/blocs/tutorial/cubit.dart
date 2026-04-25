@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/database.dart';
+import '../../utils/tutorial_steps.dart';
 import 'state.dart';
 
 export 'state.dart';
@@ -27,6 +28,10 @@ class TutorialCubit extends Cubit<TutorialState> {
 
   void nextStep() {
     final nextIndex = state.currentStepIndex + 1;
+    if (nextIndex >= getTutorialSteps().length) {
+      completeTutorial();
+      return;
+    }
     emit(state.copyWith(currentStepIndex: nextIndex));
     _prefs.setInt('tutorial_last_step', nextIndex);
   }

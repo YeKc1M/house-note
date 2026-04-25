@@ -57,7 +57,8 @@ List<TutorialStep> getTutorialSteps() {
       id: 'set_thumbnail',
       title: '设置缩略图',
       description: '点击眼睛图标，设置缩略图显示字段。这些字段会显示在实例卡片上，方便对比。',
-      actionType: TutorialActionType.tap,
+      actionType: TutorialActionType.observe,
+      requiresUserAction: false,
     ),
     TutorialStep(
       id: 'save_template',
@@ -106,7 +107,8 @@ List<TutorialStep> getTutorialSteps() {
       id: 'navigate_into_instance',
       title: '进入实例',
       description: '点击实例卡片进入下一层。现在你可以在小区下创建房子实例了。',
-      actionType: TutorialActionType.tap,
+      actionType: TutorialActionType.observe,
+      requiresUserAction: false,
     ),
     TutorialStep(
       id: 'create_child_instance',
@@ -126,7 +128,8 @@ List<TutorialStep> getTutorialSteps() {
       id: 'confirm_delete_child',
       title: '确认删除',
       description: '确认删除「7栋-1203」。因为这个实例下没有子实例，所以直接删除。',
-      actionType: TutorialActionType.tap,
+      actionType: TutorialActionType.observe,
+      requiresUserAction: false,
     ),
     TutorialStep(
       id: 'create_another_child',
@@ -136,12 +139,12 @@ List<TutorialStep> getTutorialSteps() {
       actionType: TutorialActionType.type,
       defaultInput: '8栋-1502',
     ),
-    TutorialStep(
+    const TutorialStep(
       id: 'navigate_back',
       title: '返回上层',
       description: '点击面包屑导航的「全部」，回到上一层。',
-      targetKey: TutorialKeys.breadcrumbRoot,
-      actionType: TutorialActionType.tap,
+      actionType: TutorialActionType.observe,
+      requiresUserAction: false,
     ),
     const TutorialStep(
       id: 'swipe_delete_parent',
@@ -153,7 +156,8 @@ List<TutorialStep> getTutorialSteps() {
       id: 'confirm_cascade_delete',
       title: '级联删除',
       description: '确认删除。可以看到提示「将同时删除 1 个子实例」，这就是级联删除。',
-      actionType: TutorialActionType.tap,
+      actionType: TutorialActionType.observe,
+      requiresUserAction: false,
     ),
     const TutorialStep(
       id: 'settings_tutorial',
