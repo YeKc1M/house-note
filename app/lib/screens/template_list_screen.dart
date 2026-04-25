@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/template_list/cubit.dart';
+import '../utils/tutorial_keys.dart';
 
 class TemplateListScreen extends StatelessWidget {
   const TemplateListScreen({super.key});
@@ -50,6 +51,7 @@ class TemplateListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        key: TutorialKeys.templateListFab,
         heroTag: 'templateListFab',
         onPressed: () => Navigator.pushNamed(context, '/templateEditor'),
         child: const Icon(Icons.add),

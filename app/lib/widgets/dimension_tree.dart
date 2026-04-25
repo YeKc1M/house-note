@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/dimension_node.dart';
+import '../utils/tutorial_keys.dart';
 
 class DimensionTree extends StatelessWidget {
   final List<DimensionNode> nodes;
@@ -40,6 +41,7 @@ class DimensionTree extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
+                key: TutorialKeys.visibilityIcon(node.id),
                 icon: Icon(
                   thumbnailDimensionIds.contains(node.id)
                       ? Icons.visibility

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/instance_editor/cubit.dart';
 import '../data/database.dart' show Instance;
 import '../models/dimension_node.dart';
+import '../utils/tutorial_keys.dart';
 import '../widgets/instance_card.dart';
 
 class InstanceEditorScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
         ),
         actions: [
           IconButton(
+            key: TutorialKeys.instanceSaveButton,
             icon: const Icon(Icons.save),
             onPressed: () async {
               final cubit = context.read<InstanceEditorCubit>();
