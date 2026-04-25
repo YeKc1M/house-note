@@ -6,6 +6,7 @@ import 'package:house_note/app.dart';
 import 'package:house_note/data/database.dart';
 import 'package:house_note/widgets/instance_card.dart';
 import 'package:house_note/data/default_template_loader.dart';
+import 'package:house_note/utils/tutorial_keys.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -1303,14 +1304,19 @@ void main() {
       // Verify tutorial overlay appears
       expect(find.text('退出教程'), findsOneWidget);
 
-      // Step 2: observe - tap 下一步
-      expect(find.text('模板管理'), findsOneWidget);
+      // Step 0: welcome - tap 下一步
+      expect(find.text('欢迎使用'), findsOneWidget);
       await tester.tap(find.text('下一步'));
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Step 3: tap FAB to create template
+      // Step 1: template tab intro - tap 下一步
+      expect(find.text('模板管理'), findsWidgets);
+      await tester.tap(find.text('下一步'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Step 2: tap FAB to create template
       expect(find.text('创建模板'), findsOneWidget);
-      await tester.tap(find.byType(FloatingActionButton).first);
+      await tester.tap(find.byKey(TutorialKeys.templateListFab));
       await tester.pump(const Duration(milliseconds: 500));
 
       // Template editor should open

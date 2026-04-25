@@ -92,19 +92,25 @@ class _TutorialLayerState extends State<_TutorialLayer> {
 
     return Stack(
       children: [
+        // Background overlay - ignore pointer events so user can interact with app
         if (rect != null)
-          CustomPaint(
-            size: MediaQuery.of(context).size,
-            painter: TutorialSpotlightPainter(targetRect: rect),
+          IgnorePointer(
+            child: CustomPaint(
+              size: MediaQuery.of(context).size,
+              painter: TutorialSpotlightPainter(targetRect: rect),
+            ),
           )
         else
-          Container(
-            color: Colors.black.withValues(alpha: 0.75),
-            child: const Center(
-              child: CircularProgressIndicator(),
+          IgnorePointer(
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.75),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
           ),
 
+        // Exit button - receives pointer events
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           right: 16,
@@ -121,6 +127,7 @@ class _TutorialLayerState extends State<_TutorialLayer> {
           ),
         ),
 
+        // Tooltip - receives pointer events
         if (step != null)
           _TooltipCard(
             step: step,
@@ -129,6 +136,7 @@ class _TutorialLayerState extends State<_TutorialLayer> {
             totalSteps: getTutorialSteps().length,
           ),
 
+        // Exit dialog - receives pointer events
         if (widget.state.showExitDialog)
           _ExitDialog(),
       ],

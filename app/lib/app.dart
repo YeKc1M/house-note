@@ -15,6 +15,7 @@ import 'screens/instance_list_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/template_editor_screen.dart';
 import 'screens/template_list_screen.dart';
+import 'utils/tutorial_steps.dart';
 import 'widgets/tutorial_overlay.dart';
 
 class HouseNoteApp extends StatelessWidget {
@@ -46,17 +47,16 @@ class HouseNoteApp extends StatelessWidget {
             useMaterial3: true,
           ),
           initialRoute: '/',
+          builder: (context, child) => TutorialOverlay(child: child!),
           onGenerateRoute: (settings) {
             switch (settings.name) {
               case '/':
                 return MaterialPageRoute(
                   builder: (_) => BlocProvider(
                     create: (_) => SettingsCubit(prefs),
-                    child: TutorialOverlay(
-                      child: _MainShell(
-                        prefs: prefs,
-                        tutorialCubit: tutorialCubit,
-                      ),
+                    child: _MainShell(
+                      prefs: prefs,
+                      tutorialCubit: tutorialCubit,
                     ),
                   ),
                 );
@@ -162,16 +162,37 @@ class _MainShellState extends State<_MainShell> {
       const SettingsScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
-          BottomNavigationBarItem(icon: Icon(Icons.layers), label: '模板'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '设置'),
-        ],
+    return BlocListener<TutorialCubit, TutorialState>(
+      listenWhen: (previous, current) =>
+          previous.currentStepIndex != current.currentStepIndex,
+      listener: (context, state) {
+        if (!state.isActive) return;
+        final steps = getTutorialSteps();
+        if (state.currentStepIndex < 0 ||
+            state.currentStepIndex >= steps.length) {
+          return;
+        }
+        final step = steps[state.currentStepIndex];
+        final targetIndex = switch (step.id) {
+          'template_tab_intro' => 1,
+          'instance_tab_intro' => 0,
+          _ => null,
+        };
+        if (targetIndex != null && targetIndex != _index) {
+          setState(() => _index = targetIndex);
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(index: _index, children: pages),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _index,
+          onTap: (i) => setState(() => _index = i),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
+            BottomNavigationBarItem(icon: Icon(Icons.layers), label: '模板'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: '设置'),
+          ],
+        ),
       ),
     );
   }
