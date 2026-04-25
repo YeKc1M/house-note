@@ -6,6 +6,7 @@ import 'blocs/instance_list/cubit.dart';
 import 'blocs/settings/cubit.dart';
 import 'blocs/template_editor/cubit.dart';
 import 'blocs/template_list/cubit.dart';
+import 'blocs/tutorial/cubit.dart';
 import 'data/database.dart';
 import 'data/instance_repository.dart';
 import 'data/template_repository.dart';
@@ -14,7 +15,7 @@ import 'screens/instance_list_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/template_editor_screen.dart';
 import 'screens/template_list_screen.dart';
-import 'screens/tutorial_screen.dart';
+import 'widgets/tutorial_overlay.dart';
 
 class HouseNoteApp extends StatelessWidget {
   final AppDatabase database;
@@ -26,6 +27,7 @@ class HouseNoteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final templateRepo = TemplateRepository(database);
     final instanceRepo = InstanceRepository(database);
+    final tutorialCubit = TutorialCubit(prefs, database);
 
     return MultiRepositoryProvider(
       providers: [
@@ -33,53 +35,55 @@ class HouseNoteApp extends StatelessWidget {
         RepositoryProvider.value(value: templateRepo),
         RepositoryProvider.value(value: instanceRepo),
       ],
-      child: MaterialApp(
-        title: 'House Note',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        initialRoute: '/',
-        onGenerateRoute: (settings) {
-          switch (settings.name) {
-            case '/':
-              return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => SettingsCubit(prefs),
-                  child: _MainShell(prefs: prefs),
-                ),
-              );
-            case '/templateEditor':
-              final templateId = settings.arguments as String?;
-              return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => TemplateEditorCubit(templateRepo),
-                  child: TemplateEditorScreen(templateId: templateId),
-                ),
-              );
-            case '/instanceEditor':
-              final args = settings.arguments as Map<String, dynamic>?;
-              return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => InstanceEditorCubit(instanceRepo, templateRepo),
-                  child: InstanceEditorScreen(
-                    instanceId: args?['instanceId'] as String?,
-                    templateId: args?['templateId'] as String?,
-                    parentInstanceId: args?['parentInstanceId'] as String?,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: tutorialCubit),
+        ],
+        child: MaterialApp(
+          title: 'House Note',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          initialRoute: '/',
+          onGenerateRoute: (settings) {
+            switch (settings.name) {
+              case '/':
+                return MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => SettingsCubit(prefs),
+                    child: TutorialOverlay(
+                      child: _MainShell(
+                        prefs: prefs,
+                        tutorialCubit: tutorialCubit,
+                      ),
+                    ),
                   ),
-                ),
-              );
-            case '/tutorial':
-              final isFirstRun = settings.arguments == true;
-              return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => SettingsCubit(prefs),
-                  child: TutorialScreen(isFirstRun: isFirstRun),
-                ),
-              );
-          }
-          return null;
-        },
+                );
+              case '/templateEditor':
+                final templateId = settings.arguments as String?;
+                return MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => TemplateEditorCubit(templateRepo),
+                    child: TemplateEditorScreen(templateId: templateId),
+                  ),
+                );
+              case '/instanceEditor':
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (_) => BlocProvider(
+                    create: (_) => InstanceEditorCubit(instanceRepo, templateRepo),
+                    child: InstanceEditorScreen(
+                      instanceId: args?['instanceId'] as String?,
+                      templateId: args?['templateId'] as String?,
+                      parentInstanceId: args?['parentInstanceId'] as String?,
+                    ),
+                  ),
+                );
+            }
+            return null;
+          },
+        ),
       ),
     );
   }
@@ -87,8 +91,12 @@ class HouseNoteApp extends StatelessWidget {
 
 class _MainShell extends StatefulWidget {
   final SharedPreferences prefs;
+  final TutorialCubit tutorialCubit;
 
-  const _MainShell({required this.prefs});
+  const _MainShell({
+    required this.prefs,
+    required this.tutorialCubit,
+  });
 
   @override
   State<_MainShell> createState() => _MainShellState();
@@ -126,8 +134,9 @@ class _MainShellState extends State<_MainShell> {
           ),
           ElevatedButton(
             onPressed: () {
+              settingsCubit.markTutorialSeen();
               Navigator.pop(dialogContext);
-              Navigator.pushNamed(context, '/tutorial', arguments: true);
+              widget.tutorialCubit.startTutorial();
             },
             child: const Text('查看教程'),
           ),
