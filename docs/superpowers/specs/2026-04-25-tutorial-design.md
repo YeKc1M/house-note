@@ -34,7 +34,7 @@
 ```
 进入「设置」页
   └── 点击「查看教程」
-        └── 进入 TutorialScreen（不修改 tutorialSeen 状态）
+        └── 进入 TutorialScreen（`isFirstRun: false`，不修改 tutorialSeen 状态）
               └── 看完或点击「跳过」→ 返回设置页
 ```
 
@@ -125,12 +125,22 @@ void main() async {
 - **标题:** 「欢迎使用 House Note」
 - **内容:** 「这是您第一次使用。是否查看快速入门教程？」
 - **按钮:**
-  - 「查看教程」→ `Navigator.pushNamed(context, '/tutorial')`
+  - 「查看教程」→ `Navigator.pushNamed(context, '/tutorial', arguments: true)`（传递 `isFirstRun: true`）
   - 「跳过」   → `context.read<SettingsCubit>().markTutorialSeen()`，关闭对话框
 
 ### 4.2 TutorialScreen 结构
 
-`TutorialScreen` 是一个 `StatefulWidget`，核心布局：
+`TutorialScreen` 是一个 `StatefulWidget`，接收 `isFirstRun` 参数以区分首次运行和设置页重放：
+
+```dart
+class TutorialScreen extends StatefulWidget {
+  final bool isFirstRun;
+  const TutorialScreen({super.key, this.isFirstRun = false});
+  // ...
+}
+```
+
+核心布局：
 
 ```
 Scaffold
@@ -155,8 +165,9 @@ Scaffold
 
 - `PageView` 使用 `physics: const ClampingScrollPhysics()`，支持左右滑动。
 - 页面切换时，dots 和底部按钮状态同步更新。
-- 「跳过」按钮：调用 `markTutorialSeen()`（首次运行时）并退出页面。
-- 「完成」按钮：调用 `markTutorialSeen()`（首次运行时）并退出页面。
+- 「跳过」/「完成」按钮：
+  - 若 `isFirstRun == true`：调用 `markTutorialSeen()` 后退出页面。
+  - 若 `isFirstRun == false`（从设置页进入）：直接退出页面，不修改状态。
 
 ### 4.3 路由
 
@@ -164,7 +175,10 @@ Scaffold
 
 ```dart
 case '/tutorial':
-  return MaterialPageRoute(builder: (_) => const TutorialScreen());
+  final isFirstRun = settings.arguments == true;
+  return MaterialPageRoute(
+    builder: (_) => TutorialScreen(isFirstRun: isFirstRun),
+  );
 ```
 
 ---
