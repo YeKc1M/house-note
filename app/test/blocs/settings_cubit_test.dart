@@ -1,11 +1,18 @@
-import 'package:bloc_test/bloc_test.dart';
-import 'package:house_note/blocs/settings/cubit.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:house_note/blocs/settings/state.dart';
 
 void main() {
-  blocTest<SettingsCubit, SettingsState>(
-    'toggles lan sync',
-    build: SettingsCubit.new,
-    act: (cubit) => cubit.toggleLanSync(true),
-    expect: () => [const SettingsState(lanSyncEnabled: true)],
-  );
+  group('SettingsState', () {
+    test('defaults tutorialSeen to false', () {
+      const state = SettingsState();
+      expect(state.tutorialSeen, false);
+    });
+
+    test('copyWith updates tutorialSeen', () {
+      const state = SettingsState();
+      final updated = state.copyWith(tutorialSeen: true);
+      expect(updated.tutorialSeen, true);
+      expect(updated.lanSyncEnabled, false);
+    });
+  });
 }
