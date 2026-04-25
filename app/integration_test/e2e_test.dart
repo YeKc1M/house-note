@@ -1246,6 +1246,10 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
       await pumpUntilFound(tester, find.text('客厅'));
 
+      // Go back to 7栋-1203 to create sibling 卧室 instance
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
       // Create 卧室 instance
       await tester.tap(instanceListFab(), warnIfMissed: false);
       await tester.pumpAndSettle();
