@@ -15,8 +15,6 @@ void main() {
     expect(state.currentStepIndex, 0);
     expect(state.startTimestamp, isNull);
     expect(state.showExitDialog, false);
-    expect(state.createdTemplateIds, isEmpty);
-    expect(state.createdInstanceIds, isEmpty);
   });
 
   test('TutorialState copyWith works', () {
@@ -88,10 +86,11 @@ void main() {
       seed: () => const TutorialState(isActive: true, currentStepIndex: 3),
       act: (cubit) => cubit.exitWithoutCleanup(),
       expect: () => [
-        const TutorialState(isActive: false, currentStepIndex: 0, showExitDialog: false),
+        const TutorialState(isActive: false, currentStepIndex: 0),
       ],
       verify: (_) {
         verify(() => mockPrefs.setBool('tutorial_was_active', false)).called(1);
+        verify(() => mockPrefs.setInt('tutorial_last_step', 0)).called(1);
       },
     );
   });

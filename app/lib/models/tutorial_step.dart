@@ -18,6 +18,8 @@ class TutorialStep {
   final String? expectedRoute;
   final String? defaultInput;
   final bool requiresUserAction;
+  final int? targetTabIndex;
+  final bool advanceOnDialog;
 
   const TutorialStep({
     required this.id,
@@ -29,5 +31,7 @@ class TutorialStep {
     this.expectedRoute,
     this.defaultInput,
     this.requiresUserAction = true,
+    this.targetTabIndex,
+    this.advanceOnDialog = false,
   });
 }

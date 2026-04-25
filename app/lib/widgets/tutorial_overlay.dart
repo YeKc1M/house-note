@@ -12,15 +12,16 @@ class TutorialOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TutorialCubit, TutorialState>(
-      builder: (context, state) {
-        return Stack(
-          children: [
-            child,
-            if (state.isActive) _TutorialLayer(state: state),
-          ],
-        );
-      },
+    return Stack(
+      children: [
+        child,
+        BlocBuilder<TutorialCubit, TutorialState>(
+          builder: (context, state) {
+            if (!state.isActive) return const SizedBox.shrink();
+            return _TutorialLayer(state: state);
+          },
+        ),
+      ],
     );
   }
 }
@@ -53,36 +54,35 @@ class _TutorialLayerState extends State<_TutorialLayer> {
 
   void _updateTargetRect() {
     final step = _getCurrentStep();
-    if (step?.targetKey == null) {
-      setState(() => _targetRect = null);
+    final newRect = _resolveRect(step);
+    if (_targetRect == newRect) return;
+    if (_targetRect != null &&
+        newRect != null &&
+        _targetRect!.size == newRect.size &&
+        _targetRect!.topLeft == newRect.topLeft) {
       return;
     }
+    setState(() => _targetRect = newRect);
+  }
+
+  Rect? _resolveRect(TutorialStep? step) {
+    if (step?.targetKey == null) return null;
 
     final context = step!.targetKey!.currentContext;
-    if (context == null) {
-      setState(() => _targetRect = null);
-      return;
-    }
+    if (context == null) return null;
 
     final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      setState(() => _targetRect = null);
-      return;
-    }
+    if (renderBox == null) return null;
 
     final size = renderBox.size;
     final offset = renderBox.localToGlobal(Offset.zero);
-
-    setState(() {
-      _targetRect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
-    });
+    return Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
   }
 
   TutorialStep? _getCurrentStep() {
-    final steps = getTutorialSteps();
     final index = widget.state.currentStepIndex;
-    if (index < 0 || index >= steps.length) return null;
-    return steps[index];
+    if (index < 0 || index >= tutorialSteps.length) return null;
+    return tutorialSteps[index];
   }
 
   @override
@@ -92,7 +92,6 @@ class _TutorialLayerState extends State<_TutorialLayer> {
 
     return Stack(
       children: [
-        // Background overlay - ignore pointer events so user can interact with app
         if (rect != null)
           IgnorePointer(
             child: CustomPaint(
@@ -106,8 +105,6 @@ class _TutorialLayerState extends State<_TutorialLayer> {
               color: Colors.black.withValues(alpha: 0.75),
             ),
           ),
-
-        // Exit button - receives pointer events
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           left: 16,
@@ -123,19 +120,15 @@ class _TutorialLayerState extends State<_TutorialLayer> {
             child: const Text('退出教程'),
           ),
         ),
-
-        // Tooltip - receives pointer events
         if (step != null)
           _TooltipCard(
             step: step,
             targetRect: rect,
             currentStep: widget.state.currentStepIndex + 1,
-            totalSteps: getTutorialSteps().length,
+            totalSteps: tutorialSteps.length,
           ),
-
-        // Exit dialog - receives pointer events
         if (widget.state.showExitDialog)
-          _ExitDialog(),
+          const _ExitDialog(),
       ],
     );
   }
@@ -154,42 +147,40 @@ class _TooltipCard extends StatelessWidget {
     required this.totalSteps,
   });
 
-  @override
-  Widget build(BuildContext context) {
+  double _computeTop(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final safePadding = MediaQuery.of(context).padding;
-
-    double top;
     const cardHeight = 220.0;
 
+    double top;
     if (targetRect != null) {
       final targetBottom = targetRect!.bottom;
       final targetTop = targetRect!.top;
-
       if (targetBottom + cardHeight + 20 < screenSize.height - safePadding.bottom) {
         top = targetBottom + 20;
       } else {
         top = targetTop - cardHeight - 20;
       }
     } else {
-      // No target - place at bottom so it doesn't block main content
       top = screenSize.height - cardHeight - safePadding.bottom - 20;
     }
 
-    top = top.clamp(
+    return top.clamp(
       safePadding.top + 10,
       screenSize.height - cardHeight - safePadding.bottom - 10,
     );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     final showNextButton = step.actionType != TutorialActionType.tap;
 
     return Positioned(
-      top: top,
+      top: _computeTop(context),
       left: 24,
       right: 24,
       child: Stack(
         children: [
-          // Visual card - does not block hit tests on widgets beneath
           IgnorePointer(
             child: Card(
               elevation: 4,
@@ -235,12 +226,9 @@ class _TooltipCard extends StatelessWidget {
                           style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         if (showNextButton)
-                          Visibility(
-                            visible: false,
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              child: const Text('下一步'),
-                            ),
+                          const SizedBox(
+                            height: 36,
+                            width: 72,
                           ),
                       ],
                     ),
@@ -249,7 +237,6 @@ class _TooltipCard extends StatelessWidget {
               ),
             ),
           ),
-          // Interactive button overlayed at the same visual position
           if (showNextButton)
             Positioned(
               bottom: 16,
@@ -268,6 +255,8 @@ class _TooltipCard extends StatelessWidget {
 }
 
 class _ExitDialog extends StatelessWidget {
+  const _ExitDialog();
+
   @override
   Widget build(BuildContext context) {
     return Container(

@@ -4,6 +4,9 @@ import 'state.dart';
 
 export 'state.dart';
 
+const _kLanSyncEnabled = 'lan_sync_enabled';
+const _kTutorialSeen = 'tutorial_seen';
+
 class SettingsCubit extends Cubit<SettingsState> {
   final SharedPreferences _prefs;
 
@@ -12,18 +15,18 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void _load() {
-    final lanSync = _prefs.getBool('lan_sync_enabled') ?? false;
-    final tutorialSeen = _prefs.getBool('tutorial_seen') ?? false;
+    final lanSync = _prefs.getBool(_kLanSyncEnabled) ?? false;
+    final tutorialSeen = _prefs.getBool(_kTutorialSeen) ?? false;
     emit(SettingsState(lanSyncEnabled: lanSync, tutorialSeen: tutorialSeen));
   }
 
   void markTutorialSeen() {
-    _prefs.setBool('tutorial_seen', true);
+    _prefs.setBool(_kTutorialSeen, true);
     emit(state.copyWith(tutorialSeen: true));
   }
 
   void toggleLanSync(bool enabled) {
-    _prefs.setBool('lan_sync_enabled', enabled);
+    _prefs.setBool(_kLanSyncEnabled, enabled);
     emit(state.copyWith(lanSyncEnabled: enabled));
   }
 }

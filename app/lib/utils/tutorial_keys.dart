@@ -10,8 +10,11 @@ class TutorialKeys {
   static final breadcrumbRoot = GlobalKey();
   static final settingsTutorialButton = GlobalKey();
 
+  static final _instanceCardKeys = <String, GlobalKey>{};
+  static final _visibilityIconKeys = <String, GlobalKey>{};
+
   static GlobalKey instanceCard(String id) =>
-      GlobalKey(debugLabel: 'instance_card_$id');
+      _instanceCardKeys.putIfAbsent(id, () => GlobalKey(debugLabel: 'instance_card_$id'));
   static GlobalKey visibilityIcon(String dimensionId) =>
-      GlobalKey(debugLabel: 'visibility_$dimensionId');
+      _visibilityIconKeys.putIfAbsent(dimensionId, () => GlobalKey(debugLabel: 'visibility_$dimensionId'));
 }
