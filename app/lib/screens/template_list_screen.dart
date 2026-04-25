@@ -30,7 +30,7 @@ class TemplateListScreen extends StatelessWidget {
                       context: context,
                       builder: (_) => AlertDialog(
                         title: const Text('确认删除'),
-                        content: const Text('删除模板将同时删除其下所有实例。确认删除？'),
+                        content: const Text('删除模板不会删除已创建的实例，实例仍可正常查看。确认删除？'),
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
                           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),

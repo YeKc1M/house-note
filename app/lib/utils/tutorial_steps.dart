@@ -27,7 +27,7 @@ List<TutorialStep> getTutorialSteps() {
     TutorialStep(
       id: 'enter_template_name',
       title: '输入模板名称',
-      description: '输入模板名称。这里已经帮你填好了建议名称。',
+      description: '在这里输入模板名称。',
       targetKey: TutorialKeys.templateNameField,
       actionType: TutorialActionType.type,
       defaultInput: '房子模板',
