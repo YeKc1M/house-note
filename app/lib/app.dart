@@ -55,6 +55,7 @@ class HouseNoteApp extends StatelessWidget {
             switch (settings.name) {
               case '/':
                 return MaterialPageRoute(
+                  settings: settings,
                   builder: (_) => BlocProvider(
                     create: (_) => SettingsCubit(prefs),
                     child: _MainShell(
@@ -66,6 +67,7 @@ class HouseNoteApp extends StatelessWidget {
               case '/templateEditor':
                 final templateId = settings.arguments as String?;
                 return MaterialPageRoute(
+                  settings: settings,
                   builder: (_) => BlocProvider(
                     create: (_) => TemplateEditorCubit(templateRepo),
                     child: TemplateEditorScreen(templateId: templateId),
@@ -74,6 +76,7 @@ class HouseNoteApp extends StatelessWidget {
               case '/instanceEditor':
                 final args = settings.arguments as Map<String, dynamic>?;
                 return MaterialPageRoute(
+                  settings: settings,
                   builder: (_) => BlocProvider(
                     create: (_) => InstanceEditorCubit(instanceRepo, templateRepo),
                     child: InstanceEditorScreen(
