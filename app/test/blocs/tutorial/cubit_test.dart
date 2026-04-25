@@ -1,6 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:house_note/blocs/tutorial/state.dart';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:house_note/blocs/tutorial/cubit.dart';
 import 'package:mocktail/mocktail.dart';

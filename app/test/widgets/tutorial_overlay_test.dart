@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:house_note/blocs/tutorial/cubit.dart';
-import 'package:house_note/blocs/tutorial/state.dart';
 import 'package:house_note/widgets/tutorial_overlay.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';

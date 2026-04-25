@@ -1284,42 +1284,58 @@ void main() {
       expect(find.text('主卧'), findsOneWidget);
     });
 
-    testWidgets('Story: First-time user sees tutorial prompt and can skip',
+    testWidgets('Story: First-time user sees tutorial prompt and overlay',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: prefs));
       await tester.pumpAndSettle();
 
       // Verify welcome dialog appears
       expect(find.text('欢迎使用 House Note'), findsOneWidget);
       expect(find.text('这是您第一次使用。是否查看快速入门教程？'), findsOneWidget);
 
-      // Tap 查看教程
+      // Tap 查看教程 to start interactive tutorial
       await tester.tap(find.text('查看教程'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Verify tutorial overlay appears
+      expect(find.text('退出教程'), findsOneWidget);
+
+      // Step 2: observe - tap 下一步
+      expect(find.text('模板管理'), findsOneWidget);
+      await tester.tap(find.text('下一步'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Step 3: tap FAB to create template
+      expect(find.text('创建模板'), findsOneWidget);
+      await tester.tap(find.byType(FloatingActionButton).first);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Template editor should open
+      expect(find.text('新建模板'), findsOneWidget);
+
+      // Tutorial overlay should still be showing
+      expect(find.text('退出教程'), findsOneWidget);
+
+      // Exit tutorial
+      await tester.tap(find.text('退出教程'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Exit dialog should appear
+      expect(find.text('退出并删除数据'), findsOneWidget);
+      await tester.tap(find.text('退出并删除数据'));
       await tester.pumpAndSettle();
 
-      // Verify TutorialScreen opens
-      expect(find.text('快速入门'), findsOneWidget);
-      expect(find.text('欢迎来到 House Note'), findsOneWidget);
-
-      // Swipe through all pages
-      for (var i = 0; i < 6; i++) {
-        await tester.tap(find.text('下一页'));
-        await tester.pumpAndSettle();
-      }
-
-      // On last page, tap 完成
-      expect(find.text('开始记录吧'), findsOneWidget);
-      await tester.tap(find.text('完成'));
-      await tester.pumpAndSettle();
-
-      // Should be back on home screen
-      expect(find.text('首页'), findsNWidgets(2));
+      // Tutorial should be ended
+      expect(find.text('退出教程'), findsNothing);
 
       // Rebuild app to simulate restart
-      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: prefs));
       await tester.pumpAndSettle();
 
-      // Dialog should NOT appear again
+      // Dialog should NOT appear again (tutorial was marked as seen)
       expect(find.text('欢迎使用 House Note'), findsNothing);
     });
   });
