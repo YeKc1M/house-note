@@ -4,6 +4,7 @@ import '../blocs/instance_list/cubit.dart';
 import '../data/database.dart';
 import '../data/instance_repository.dart';
 import '../data/template_repository.dart';
+import '../utils/tutorial_keys.dart';
 import '../widgets/breadcrumb_bar.dart';
 import '../widgets/instance_card.dart';
 
@@ -21,6 +22,7 @@ class InstanceListScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: BreadcrumbBar(
+                  key: TutorialKeys.breadcrumbRoot,
                   breadcrumbs: state.breadcrumbs,
                   onTap: (index) => context.read<InstanceListCubit>().navigateToBreadcrumb(index),
                 ),
@@ -77,6 +79,7 @@ class InstanceListScreen extends StatelessWidget {
                         return false;
                       },
                       child: InstanceCard(
+                        key: TutorialKeys.instanceCard(inst.id),
                         instance: inst,
                         thumbnailValues: state.thumbnailValues[inst.id] ?? {},
                         onTap: () {
@@ -118,6 +121,7 @@ class InstanceListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        key: TutorialKeys.instanceListFab,
         heroTag: 'instanceListFab',
         onPressed: () async {
           final cubit = context.read<InstanceListCubit>();

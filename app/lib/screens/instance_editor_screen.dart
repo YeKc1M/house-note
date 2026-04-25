@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/instance_editor/cubit.dart';
 import '../data/database.dart' show Instance;
 import '../models/dimension_node.dart';
+import '../blocs/tutorial/cubit.dart';
+import '../utils/tutorial_keys.dart';
 import '../widgets/instance_card.dart';
 
 class InstanceEditorScreen extends StatefulWidget {
@@ -47,19 +49,25 @@ class _InstanceEditorScreenState extends State<InstanceEditorScreen> {
               Text(state.name.isEmpty ? '新建实例' : state.name),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () async {
-              final cubit = context.read<InstanceEditorCubit>();
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(context);
-              await cubit.saveInstance();
-              if (mounted) {
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('实例保存成功')),
-                );
-                navigator.pop(true);
-              }
+          Builder(
+            builder: (context) {
+              final tutorialActive = context.read<TutorialCubit>().state.isActive;
+              return IconButton(
+                key: tutorialActive ? TutorialKeys.instanceSaveButton : null,
+                icon: const Icon(Icons.save),
+                onPressed: () async {
+                  final cubit = context.read<InstanceEditorCubit>();
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(context);
+                  await cubit.saveInstance();
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('实例保存成功')),
+                    );
+                    navigator.pop(true);
+                  }
+                },
+              );
             },
           ),
         ],

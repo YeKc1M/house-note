@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/settings/cubit.dart';
+import '../blocs/tutorial/cubit.dart';
 import '../data/database.dart';
 import '../data/default_template_loader.dart';
 
@@ -61,6 +62,41 @@ class SettingsScreen extends StatelessWidget {
               value: state.lanSyncEnabled,
               onChanged: (v) => context.read<SettingsCubit>().toggleLanSync(v),
             ),
+          ),
+          const Divider(),
+          const ListTile(title: Text('帮助', style: TextStyle(fontWeight: FontWeight.bold))),
+          BlocBuilder<TutorialCubit, TutorialState>(
+            builder: (context, tutorialState) {
+              return ListTile(
+                leading: const Icon(Icons.school),
+                title: const Text('查看教程'),
+                subtitle: const Text('重新运行新手指引'),
+                enabled: !tutorialState.isActive,
+                onTap: () async {
+                  final cubit = context.read<TutorialCubit>();
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('重新开始教程'),
+                      content: const Text('教程中创建的数据可以在退出时删除。确定开始？'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('取消'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('开始'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    cubit.startTutorial();
+                  }
+                },
+              );
+            },
           ),
           const Divider(),
           const ListTile(title: Text('关于', style: TextStyle(fontWeight: FontWeight.bold))),

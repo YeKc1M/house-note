@@ -6,9 +6,11 @@ import 'package:house_note/app.dart';
 import 'package:house_note/data/database.dart';
 import 'package:house_note/widgets/instance_card.dart';
 import 'package:house_note/data/default_template_loader.dart';
+import 'package:house_note/utils/tutorial_keys.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 
 Finder bottomNavItem(String label) {
   return find.descendant(
@@ -59,16 +61,16 @@ Finder dialogDropdown() {
 
 Future<void> addSingleChoiceOption(WidgetTester tester, String option) async {
   await tester.enterText(dialogOptionTextField(), option);
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.tap(dialogAddButton());
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 Future<void> selectDimensionType(WidgetTester tester, String typeLabel) async {
   await tester.tap(dialogDropdown().first);
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text(typeLabel).last);
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 Finder dialogTemplateDropdown() {
@@ -106,6 +108,24 @@ Finder visibilityToggleForDimension(String dimensionName) {
   );
 }
 
+Future<void> withStepTimeout(
+  String stepName,
+  Future<void> Function() action,
+) async {
+  await action().timeout(
+    const Duration(seconds: 10),
+    onTimeout: () => throw Exception('Step "$stepName" timed out after 10 seconds'),
+  );
+}
+
+Future<void> dismissSnackBarIfAny(WidgetTester tester) async {
+  final snackBar = find.byType(SnackBar);
+  if (snackBar.evaluate().isNotEmpty) {
+    await tester.fling(snackBar, const Offset(0, 100), 500, warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -114,6 +134,7 @@ void main() {
     late File dbFile;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({'tutorial_seen': true});
       final tempDir = Directory.systemTemp;
       dbFile = File(p.join(tempDir.path, 'e2e_test_${DateTime.now().millisecondsSinceEpoch}.db'));
       db = AppDatabase.forTesting(NativeDatabase.createInBackground(dbFile));
@@ -128,7 +149,7 @@ void main() {
 
     testWidgets('Story 1.1 - Create house template and community template with reference',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板 (Templates) tab
@@ -182,7 +203,7 @@ void main() {
       expect(templates.map((t) => t.name), contains('房子模板'));
 
       // Rebuild app to force fresh load of template list
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -251,7 +272,7 @@ void main() {
       expect(allTemplates.map((t) => t.name), containsAll(['小区模板', '房子模板']));
 
       // Rebuild app to force fresh load
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -261,7 +282,7 @@ void main() {
 
     testWidgets('Story 1.2 - Edit existing template and subtemplate reference',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates directly in DB
@@ -317,7 +338,7 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
 
       // Rebuild and verify
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
       await tester.tap(bottomNavItem('模板'));
       await tester.pumpAndSettle();
@@ -338,7 +359,7 @@ void main() {
 
     testWidgets('Story 2.1 + 2.2 - Create top-level and child instances',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates directly in DB for speed
@@ -429,7 +450,7 @@ void main() {
 
     testWidgets('Story 2.3 + 2.4 - Custom fields and hide/restore template fields',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create template and instance
@@ -508,7 +529,7 @@ void main() {
 
     testWidgets('Story 2.5 - Add custom fields of all types via tag editor',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create template and instance
@@ -597,7 +618,7 @@ void main() {
 
     testWidgets('Story 3.1 - Browse parent-child instances with breadcrumbs',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       final communityTemplateId = await _insertTemplate(db, '小区模板', [
@@ -656,7 +677,7 @@ void main() {
 
     testWidgets('Story 3.2 - Configure thumbnail fields in template editor and verify on instance cards',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create templates with dimensions in DB
@@ -789,7 +810,7 @@ void main() {
 
     testWidgets('Story 4.1 - Swipe to delete parent instance cascades to children',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create a 3-level hierarchy directly in DB
@@ -845,7 +866,7 @@ void main() {
 
     testWidgets('Story 4.2 - Swipe to delete child instance cascades to grandchildren',
         (WidgetTester tester) async {
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Pre-create a 3-level hierarchy directly in DB
@@ -941,7 +962,7 @@ void main() {
         db, houseTemplateId, communityId, '7栋-1203', {'d1': '南'},
       );
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Tap edit icon on community instance card
@@ -1016,7 +1037,7 @@ void main() {
         db, houseTemplateId, communityId, '7栋-1203', {'d1': '南'},
       );
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Tap edit icon on community instance card
@@ -1057,7 +1078,7 @@ void main() {
         (WidgetTester tester) async {
       // Fresh DB + loader simulates first app launch
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板 tab
@@ -1100,12 +1121,12 @@ void main() {
           .go();
 
       // Restart app (re-pump)
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Call loader again simulating app restart
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 模板
@@ -1132,7 +1153,7 @@ void main() {
             ..where((t) => t.id.equals(livingRoom.id)))
           .go();
 
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Go to Settings and restore
@@ -1154,7 +1175,7 @@ void main() {
     testWidgets('Full instance creation flow with default templates',
         (WidgetTester tester) async {
       await DefaultTemplateLoader(db).loadIfNeeded();
-      await tester.pumpWidget(HouseNoteApp(database: db));
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: await SharedPreferences.getInstance()));
       await tester.pumpAndSettle();
 
       // Navigate to 首页
@@ -1280,6 +1301,347 @@ void main() {
       expect(find.text('7栋-1203'), findsOneWidget);
       expect(find.text('客厅'), findsOneWidget);
       expect(find.text('主卧'), findsOneWidget);
+    });
+
+    testWidgets('Story: First-time user completes full 22-step tutorial',
+        (WidgetTester tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      await tester.pumpWidget(HouseNoteApp(database: db, prefs: prefs));
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
+
+      // Welcome dialog
+      await withStepTimeout('welcome dialog', () async {
+        expect(find.text('欢迎使用 House Note'), findsOneWidget);
+        await tester.tap(find.text('查看教程'));
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('退出教程'), findsOneWidget);
+      });
+
+      // Step 1/23: welcome (observe)
+      await withStepTimeout('step 1 welcome', () async {
+        expect(find.text('欢迎使用'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 2/23: template tab intro (observe)
+      await withStepTimeout('step 2 template tab intro', () async {
+        expect(find.text('模板管理'), findsWidgets);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 3/23: create first template (tap)
+      await withStepTimeout('step 3 create first template', () async {
+        expect(find.text('创建模板'), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.byType(FloatingActionButton).hitTestable());
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.text('新建模板'), findsOneWidget);
+      });
+
+      // Step 4/23: enter template name (type)
+      await withStepTimeout('step 4 enter template name', () async {
+        expect(find.text('输入模板名称'), findsOneWidget);
+        await tester.enterText(find.byType(TextField).first, '房子模板');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 5/23: add dimension (tap)
+      await withStepTimeout('step 5 add dimension', () async {
+        expect(find.widgetWithText(ElevatedButton, '添加维度项'), findsOneWidget);
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 800));
+      });
+
+      // Step 6/23: configure dimension (type)
+      await withStepTimeout('step 6 configure dimension', () async {
+        expect(find.text('配置维度'), findsOneWidget);
+        await tester.enterText(dialogTextField(0), '朝向');
+        await tester.pump(const Duration(milliseconds: 300));
+        await selectDimensionType(tester, '单选');
+        await addSingleChoiceOption(tester, '东');
+        await addSingleChoiceOption(tester, '南');
+        await addSingleChoiceOption(tester, '西');
+        await addSingleChoiceOption(tester, '北');
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 7/23: add more dimensions (tap) - tap opens dialog, route observer advances
+      await withStepTimeout('step 7 add more dimensions', () async {
+        expect(find.text('继续添加维度'), findsOneWidget);
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.enterText(dialogTextField(0), '楼层');
+        await tester.pump(const Duration(milliseconds: 300));
+        await selectDimensionType(tester, '数字');
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 8/23: set thumbnail (observe)
+      await withStepTimeout('step 8 set thumbnail', () async {
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.enterText(dialogTextField(0), '户型');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(visibilityToggleForDimension('朝向 (single_choice)'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(visibilityToggleForDimension('楼层 (number)'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 9/23: save template (tap)
+      await withStepTimeout('step 9 save template', () async {
+        expect(find.text('保存模板'), findsOneWidget);
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+      });
+      await dismissSnackBarIfAny(tester);
+
+      // Step 10/23: create second template (tap)
+      await withStepTimeout('step 10 create second template', () async {
+        expect(find.text('创建小区模板'), findsOneWidget);
+        await tester.tap(bottomNavItem('模板'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.byType(FloatingActionButton).hitTestable());
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.text('新建模板'), findsOneWidget);
+      });
+
+      // Step 11/23: configure community template (type)
+      await withStepTimeout('step 11 configure community template', () async {
+        expect(find.text('配置小区模板'), findsOneWidget);
+        await tester.enterText(find.byType(TextField).first, '小区模板');
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Add 小区名
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(dialogTextField(0), '小区名');
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Add 位置
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(dialogTextField(0), '位置');
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Add 引用子模板 - 房子列表 referencing 房子模板
+        await tester.tap(find.widgetWithText(ElevatedButton, '添加维度项'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(dialogTextField(0), '房子列表');
+        await tester.pump(const Duration(milliseconds: 200));
+        await selectDimensionType(tester, '引用子模板');
+        await pumpUntilFound(tester, dialogTemplateDropdown());
+        await tester.tap(dialogTemplateDropdown());
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('房子模板').last);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('保存').last);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Save template - pops to /
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 1));
+        await dismissSnackBarIfAny(tester);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 300));
+      });
+
+      // Step 12/23: instance tab intro (observe)
+      await withStepTimeout('step 12 instance tab intro', () async {
+        expect(find.text('实例列表'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 13/23: create instance (tap)
+      await withStepTimeout('step 13 create instance', () async {
+        expect(find.text('创建实例'), findsOneWidget);
+        await tester.tap(find.byKey(TutorialKeys.instanceListFab));
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.tap(find.text('小区模板'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 14/23: enter instance details (type)
+      await withStepTimeout('step 14 enter instance details', () async {
+        expect(find.text('填写实例信息'), findsOneWidget);
+        await tester.enterText(find.byType(TextFormField).first, '华润二十四城');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(
+          find.descendant(of: find.widgetWithText(ListTile, '位置'), matching: find.byType(TextFormField)),
+          '成华区双庆路',
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+        await dismissSnackBarIfAny(tester);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 15/23: navigate into instance (observe)
+      await withStepTimeout('step 15 navigate into instance', () async {
+        expect(find.text('进入实例'), findsOneWidget);
+        await tester.tap(find.text('华润二十四城'));
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 16/23: create child instance (type)
+      await withStepTimeout('step 16 create child instance', () async {
+        expect(find.text('创建子实例'), findsOneWidget);
+        await tester.tap(find.byKey(TutorialKeys.instanceListFab));
+        await tester.pump(const Duration(milliseconds: 800));
+        if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+          await tester.tap(find.text('房子模板'));
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+        await pumpUntilFound(tester, find.text('朝向'));
+        await tester.enterText(find.byType(TextFormField).first, '7栋-1203');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('南'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(
+          find.descendant(of: find.widgetWithText(ListTile, '楼层'), matching: find.byType(TextFormField)),
+          '12',
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+        await dismissSnackBarIfAny(tester);
+      });
+
+      // Step 17/23: swipe delete child (swipe)
+      await withStepTimeout('step 17 swipe delete child', () async {
+        expect(find.text('删除子实例'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 18/23: confirm delete child (tap)
+      await withStepTimeout('step 18 confirm delete child', () async {
+        expect(find.text('确认删除'), findsOneWidget);
+        final cardFinder = find.widgetWithText(InstanceCard, '7栋-1203');
+        await tester.drag(cardFinder, const Offset(-800, 0));
+        await tester.pump(const Duration(milliseconds: 500));
+        await pumpUntilFound(tester, find.text('确认删除'));
+        await tester.tap(find.widgetWithText(TextButton, '删除'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await pumpUntilAbsent(tester, find.text('7栋-1203'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await dismissSnackBarIfAny(tester);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 19/23: create another child (type)
+      await withStepTimeout('step 19 create another child', () async {
+        expect(find.text('再创建子实例'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.byKey(TutorialKeys.instanceListFab));
+        await tester.pump(const Duration(milliseconds: 800));
+        if (find.text('选择要新建的子类型').evaluate().isNotEmpty) {
+          await tester.tap(find.text('房子模板'));
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+        await pumpUntilFound(tester, find.text('朝向'));
+        await tester.enterText(find.byType(TextFormField).first, '8栋-1502');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('东'));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.enterText(
+          find.descendant(of: find.widgetWithText(ListTile, '楼层'), matching: find.byType(TextFormField)),
+          '15',
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump(const Duration(seconds: 2));
+        await dismissSnackBarIfAny(tester);
+      });
+
+      // Step 20/23: navigate back (observe)
+      await withStepTimeout('step 20 navigate back', () async {
+        expect(find.text('返回上层'), findsOneWidget);
+        await tester.tap(find.text('全部'));
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 21/23: swipe delete parent (swipe)
+      await withStepTimeout('step 21 swipe delete parent', () async {
+        expect(find.text('删除父实例'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 22/23: confirm cascade delete (tap)
+      await withStepTimeout('step 22 confirm cascade delete', () async {
+        expect(find.text('级联删除'), findsOneWidget);
+        final parentCard = find.widgetWithText(InstanceCard, '华润二十四城');
+        await tester.drag(parentCard, const Offset(-800, 0));
+        await tester.pump(const Duration(milliseconds: 500));
+        await pumpUntilFound(tester, find.text('确认删除'));
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.textContaining('将同时删除 1 个子实例'),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.widgetWithText(TextButton, '删除'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await pumpUntilAbsent(tester, find.text('华润二十四城'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await dismissSnackBarIfAny(tester);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Step 23/23: settings tutorial (observe)
+      await withStepTimeout('step 23 settings tutorial', () async {
+        expect(find.text('教程完成'), findsOneWidget);
+        await tester.tap(find.text('下一步'));
+        await tester.pump(const Duration(milliseconds: 500));
+      });
+
+      // Tutorial should be ended
+      expect(find.text('退出教程'), findsNothing);
+
+      // Verify cleanup - no instances should remain
+      final allInstances = await db.select(db.instances).get();
+      expect(allInstances, isEmpty);
     });
   });
 }

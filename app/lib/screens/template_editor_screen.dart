@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/template_editor/cubit.dart';
 import '../data/database.dart';
 import '../models/dimension_node.dart';
+import '../utils/tutorial_keys.dart';
 import '../widgets/dimension_tree.dart';
 
 class TemplateEditorScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         ),
         actions: [
           IconButton(
+            key: TutorialKeys.templateSaveButton,
             icon: const Icon(Icons.save),
             onPressed: () async {
               final cubit = context.read<TemplateEditorCubit>();
@@ -71,6 +73,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
+                  key: TutorialKeys.templateNameField,
                   decoration: const InputDecoration(labelText: '模板名称'),
                   onChanged: (v) => context.read<TemplateEditorCubit>().setTemplateName(v),
                   controller: _nameController,
@@ -115,6 +118,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                   spacing: 8,
                   children: [
                     ElevatedButton.icon(
+                      key: TutorialKeys.addDimensionButton,
                       onPressed: () => _showDimensionDialog(context),
                       icon: const Icon(Icons.add),
                       label: const Text('添加维度项'),
