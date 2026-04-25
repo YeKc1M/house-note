@@ -230,7 +230,7 @@ class _TooltipCard extends StatelessWidget {
                     '$currentStep / $totalSteps',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  if (step.actionType == TutorialActionType.observe)
+                  if (step.actionType != TutorialActionType.tap)
                     ElevatedButton(
                       onPressed: () {
                         context.read<TutorialCubit>().nextStep();

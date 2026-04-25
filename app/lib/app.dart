@@ -15,6 +15,7 @@ import 'screens/instance_list_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/template_editor_screen.dart';
 import 'screens/template_list_screen.dart';
+import 'utils/tutorial_route_observer.dart';
 import 'utils/tutorial_steps.dart';
 import 'widgets/tutorial_overlay.dart';
 
@@ -29,6 +30,7 @@ class HouseNoteApp extends StatelessWidget {
     final templateRepo = TemplateRepository(database);
     final instanceRepo = InstanceRepository(database);
     final tutorialCubit = TutorialCubit(prefs, database);
+    final routeObserver = TutorialRouteObserver(tutorialCubit);
 
     return MultiRepositoryProvider(
       providers: [
@@ -48,6 +50,7 @@ class HouseNoteApp extends StatelessWidget {
           ),
           initialRoute: '/',
           builder: (context, child) => TutorialOverlay(child: child!),
+          navigatorObservers: [routeObserver],
           onGenerateRoute: (settings) {
             switch (settings.name) {
               case '/':
