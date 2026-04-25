@@ -15,6 +15,11 @@ void main() {
     await tester.pumpWidget(HouseNoteApp(database: db, prefs: prefs));
     await tester.pumpAndSettle();
 
+    // Dismiss first-run tutorial dialog
+    expect(find.text('欢迎使用 House Note'), findsOneWidget);
+    await tester.tap(find.text('跳过'));
+    await tester.pumpAndSettle();
+
     expect(find.text('首页'), findsNWidgets(2));
     expect(find.text('模板'), findsOneWidget);
     expect(find.text('设置'), findsOneWidget);

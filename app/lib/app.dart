@@ -43,7 +43,12 @@ class HouseNoteApp extends StatelessWidget {
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/':
-              return MaterialPageRoute(builder: (_) => _MainShell(prefs: prefs));
+              return MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (_) => SettingsCubit(prefs),
+                  child: _MainShell(prefs: prefs),
+                ),
+              );
             case '/templateEditor':
               final templateId = settings.arguments as String?;
               return MaterialPageRoute(
@@ -88,6 +93,45 @@ class _MainShell extends StatefulWidget {
 
 class _MainShellState extends State<_MainShell> {
   int _index = 0;
+  bool _dialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorialPrompt());
+  }
+
+  void _showTutorialPrompt() {
+    if (_dialogShown) return;
+    final settingsCubit = context.read<SettingsCubit>();
+    if (settingsCubit.state.tutorialSeen) return;
+
+    _dialogShown = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('欢迎使用 House Note'),
+        content: const Text('这是您第一次使用。是否查看快速入门教程？'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              settingsCubit.markTutorialSeen();
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('跳过'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.pushNamed(context, '/tutorial', arguments: true);
+            },
+            child: const Text('查看教程'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,10 +147,7 @@ class _MainShellState extends State<_MainShell> {
         create: (_) => TemplateListCubit(templateRepo)..load(),
         child: const TemplateListScreen(),
       ),
-      BlocProvider(
-        create: (_) => SettingsCubit(widget.prefs),
-        child: const SettingsScreen(),
-      ),
+      const SettingsScreen(),
     ];
 
     return Scaffold(
