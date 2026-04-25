@@ -1,391 +1,382 @@
-# House Note — 首次使用教程设计文档
+# House Note — Interactive Tutorial Design Spec
 
-**日期:** 2026-04-25  
-**对应 PRD:** House Note PRD v1.0  
-**作者:** Claude Code  
-
----
-
-## 1. 目标
-
-为首次安装并运行 House Note 的用户提供快速入门教程。用户首次打开应用时询问是否需要教程，用户可选择查看或跳过。已安装用户也可随时在「设置」中重新查看教程。
-
-教程采用**演示式滑动页面**（Demo Walkthrough）形式：用户通过左右滑动浏览一系列说明页面，每个页面使用 Flutter 组件构建的示意界面来解释核心功能，用户无需与真实数据交互。
+**Date:** 2026-04-25
+**Feature:** First-Run Interactive Tutorial (新手指引)
+**Approach:** TutorialCubit + Custom Overlay with GlobalKeys
 
 ---
 
-## 2. 用户流程
+## 1. Overview
 
-### 2.1 首次启动流程
+A hands-on interactive tutorial overlay that guides first-time users through creating templates, instances, and navigating the app's hierarchy. The tutorial runs on the actual UI — users perform real actions (tapping, typing, swiping) while the overlay highlights relevant widgets and explains what to do.
 
-```
-启动 App
-  └── 加载首页 (_MainShell)
-        └── 首帧渲染完成后
-              └── 检查 SettingsCubit.tutorialSeen
-                    ├── false (未看过) → 弹出询问对话框
-                    │                      ├── 「查看教程」→ 进入 TutorialScreen
-                    │                      └── 「跳过」    → 标记为已看，留在首页
-                    └── true (已看过)  → 不做任何事，正常显示首页
-```
+### Key Behaviors
 
-### 2.2 设置页重放流程
-
-```
-进入「设置」页
-  └── 点击「查看教程」
-        └── 进入 TutorialScreen（`isFirstRun: false`，不修改 tutorialSeen 状态）
-              └── 看完或点击「跳过」→ 返回设置页
-```
+- **First-run prompt:** On first app launch, a dialog asks if the user wants the tutorial. Skip means never ask again.
+- **Settings access:** A "查看教程" button in Settings allows re-running the tutorial at any time.
+- **Exit with cleanup:** Users can exit anytime. On exit, they can choose to delete all tutorial-created data or keep it.
+- **Suggested inputs:** Text fields are pre-filled with demo names (e.g., "房子模板") that the user can accept or override.
 
 ---
 
-## 3. 状态管理
+## 2. Architecture
 
-### 3.1 SettingsState 扩展
+### 2.1 Components
 
-在现有 `SettingsState` 中新增 `tutorialSeen` 字段：
+```
+┌─────────────────────────────────────────┐
+│           TutorialOverlay               │
+│  (Stack widget, wraps _MainShell)       │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │      CustomPainter spotlight    │    │
+│  │      + dark background          │    │
+│  └─────────────────────────────────┘    │
+│  ┌─────────────────────────────────┐    │
+│  │      Tooltip card               │    │
+│  └─────────────────────────────────┘    │
+│  ┌─────────────────────────────────┐    │
+│  │      "退出教程" button           │    │
+│  └─────────────────────────────────┘    │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│           TutorialCubit                 │
+│  - currentStepIndex                     │
+│  - startTimestamp (for cleanup)         │
+│  - createdTemplateIds                   │
+│  - createdInstanceIds                   │
+│  - isActive, showExitDialog             │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│         SharedPreferences               │
+│  - "has_seen_tutorial": bool            │
+│  - "tutorial_was_active": bool          │
+└─────────────────────────────────────────┘
+```
+
+### 2.2 Data Flow
+
+1. **App startup:** `main.dart` checks `SharedPreferences.getBool('has_seen_tutorial')`.
+   - If `null` or `false`: show `WelcomeDialog` with "开始教程" and "跳过".
+   - If `true`: normal app launch.
+
+2. **Tutorial start:** `TutorialCubit.startTutorial()` sets:
+   - `isActive = true`
+   - `currentStepIndex = 0`
+   - `startTimestamp = DateTime.now().millisecondsSinceEpoch`
+   - Saves `tutorial_was_active = true` to SharedPreferences.
+
+3. **Step progression:** The overlay listens to `TutorialCubit` state. For each step:
+   - Finds the target widget via its `GlobalKey`.
+   - Computes `RenderBox` bounds for spotlight positioning.
+   - Renders tooltip with title, description, and action hint.
+   - Advances when the expected user action is detected (tap, route change, etc.).
+   - After advancing, saves `tutorial_last_step = currentStepIndex` to SharedPreferences.
+
+4. **Tutorial end:** `TutorialCubit.completeTutorial()` sets:
+   - `isActive = false`
+   - `has_seen_tutorial = true`
+   - `tutorial_was_active = false`
+
+5. **Exit with cleanup:** `TutorialCubit.exitAndCleanup()`:
+   - Queries DB for templates/instances with `createdAt >= startTimestamp`.
+   - Also deletes by tracked IDs in `createdTemplateIds` and `createdInstanceIds`.
+   - Sets `tutorial_was_active = false`.
+
+### 2.3 Models
 
 ```dart
-class SettingsState extends Equatable {
-  final bool lanSyncEnabled;
-  final bool tutorialSeen;  // NEW
-
-  const SettingsState({
-    this.lanSyncEnabled = false,
-    this.tutorialSeen = false,  // 默认未看过
-  });
-
-  SettingsState copyWith({bool? lanSyncEnabled, bool? tutorialSeen}) {
-    return SettingsState(
-      lanSyncEnabled: lanSyncEnabled ?? this.lanSyncEnabled,
-      tutorialSeen: tutorialSeen ?? this.tutorialSeen,
-    );
-  }
-
-  @override
-  List<Object?> get props => [lanSyncEnabled, tutorialSeen];
-}
-```
-
-### 3.2 SettingsCubit 扩展
-
-`SettingsCubit` 新增 `SharedPreferences` 依赖：
-
-```dart
-class SettingsCubit extends Cubit<SettingsState> {
-  final SharedPreferences _prefs;
-
-  SettingsCubit(this._prefs)
-      : super(const SettingsState()) {
-    _load();
-  }
-
-  void _load() {
-    final lanSync = _prefs.getBool('lan_sync_enabled') ?? false;
-    final tutorialSeen = _prefs.getBool('tutorial_seen') ?? false;
-    emit(SettingsState(lanSyncEnabled: lanSync, tutorialSeen: tutorialSeen));
-  }
-
-  void markTutorialSeen() {
-    _prefs.setBool('tutorial_seen', true);
-    emit(state.copyWith(tutorialSeen: true));
-  }
-
-  void toggleLanSync(bool enabled) {
-    _prefs.setBool('lan_sync_enabled', enabled);
-    emit(state.copyWith(lanSyncEnabled: enabled));
-  }
-}
-```
-
-### 3.3 App 启动时注入
-
-在 `main.dart` 中预先初始化 `SharedPreferences`，注入到 `HouseNoteApp`：
-
-```dart
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final db = AppDatabase();
-  runApp(HouseNoteApp(database: db, prefs: prefs));
-}
-```
-
-`HouseNoteApp` 的构造函数新增 `SharedPreferences` 参数，在 `_MainShell` 中通过 `BlocProvider` 提供 `SettingsCubit`。
-
----
-
-## 4. UI 设计
-
-### 4.1 首次启动询问对话框
-
-在 `_MainShellState.initState` 中，使用 `WidgetsBinding.instance.addPostFrameCallback` 延迟检查：
-
-- **标题:** 「欢迎使用 House Note」
-- **内容:** 「这是您第一次使用。是否查看快速入门教程？」
-- **按钮:**
-  - 「查看教程」→ `Navigator.pushNamed(context, '/tutorial', arguments: true)`（传递 `isFirstRun: true`）
-  - 「跳过」   → `context.read<SettingsCubit>().markTutorialSeen()`，关闭对话框
-
-### 4.2 TutorialScreen 结构
-
-`TutorialScreen` 是一个 `StatefulWidget`，接收 `isFirstRun` 参数以区分首次运行和设置页重放：
-
-```dart
-class TutorialScreen extends StatefulWidget {
-  final bool isFirstRun;
-  const TutorialScreen({super.key, this.isFirstRun = false});
-  // ...
-}
-```
-
-核心布局：
-
-```
-Scaffold
-├── AppBar
-│   ├── Title: 「快速入门」
-│   └── Action: 「跳过」TextButton（始终可见）
-├── Body
-│   └── PageView.builder
-│       ├── Page 1: 欢迎
-│       ├── Page 2: 创建与编辑模板
-│       ├── Page 3: 子模板引用
-│       ├── Page 4: 缩略图显示
-│       ├── Page 5: 创建实例与子实例
-│       ├── Page 6: 删除实例与模板
-│       └── Page 7: 完成
-└── BottomNavigationArea
-    ├── 页面指示器 dots (7 个圆点)
-    └── 底部操作按钮
-        ├── 非末页: 「下一页」
-        └── 末页: 「完成」
-```
-
-- `PageView` 使用 `physics: const ClampingScrollPhysics()`，支持左右滑动。
-- 页面切换时，dots 和底部按钮状态同步更新。
-- 「跳过」/「完成」按钮：
-  - 若 `isFirstRun == true`：调用 `markTutorialSeen()` 后退出页面。
-  - 若 `isFirstRun == false`（从设置页进入）：直接退出页面，不修改状态。
-
-### 4.3 路由
-
-在 `app.dart` 的 `onGenerateRoute` 中新增：
-
-```dart
-case '/tutorial':
-  final isFirstRun = settings.arguments == true;
-  return MaterialPageRoute(
-    builder: (_) => TutorialScreen(isFirstRun: isFirstRun),
-  );
-```
-
----
-
-## 5. 教程页面内容（7 页）
-
-每一页使用 Flutter 组件构建示意界面，不使用真实业务逻辑或真实数据。
-
-### Page 1 — 欢迎
-
-- **标题:** 「欢迎来到 House Note」
-- **说明文字:** 「House Note 是一款帮你结构化记录租房看房信息的工具。」
-- **核心概念示意图:**
-  - 两个上下排列的卡片：「模板」（定义结构）和「实例」（实际记录）
-  - 中间用箭头连接，文字标注：模板 → 实例
-
-### Page 2 — 创建与编辑模板
-
-- **标题:** 「第一步：创建模板」
-- **说明文字:** 「模板定义了你看房时要记录哪些维度。比如「房子模板」可以包含朝向、楼层、户型等字段。」
-- **示意组件:**
-  - 一个模拟的文本输入框，placeholder「模板名称」
-  - 3 个模拟的维度行：「朝向 / 单选」「楼层 / 数字」「户型 / 文本」
-
-### Page 3 — 子模板引用
-
-- **标题:** 「第二步：建立层级关系」
-- **说明文字:** 「通过「引用子模板」维度，可以把多个模板串联起来。比如：小区 → 房子 → 房间。」
-- **示意组件:**
-  - 水平流程图：「小区模板」→ 「房子列表(引用)」→ 「房子模板」
-  - 使用卡片 + 箭头图标组合展示
-
-### Page 4 — 缩略图显示
-
-- **标题:** 「第三步：设置卡片缩略图」
-- **说明文字:** 「在模板编辑器中点击眼睛图标，可以选择在实例卡片上显示哪些字段，方便快速对比。」
-- **示意组件:**
-  - 一个模拟的 `InstanceCard`，标题「华润二十四城」
-  - 下方显示 chip：「成华区」「是」
-  - 旁边注释箭头指向 chip 区域
-
-### Page 5 — 创建实例与子实例
-
-- **标题:** 「第四步：录入看房记录」
-- **说明文字:** 「在首页选择模板创建记录。点击进入实例后，可以继续添加子实例，按层级记录每一套房子的信息。」
-- **示意组件:**
-  - 模拟面包屑：「全部 > 华润二十四城」
-  - 两个模拟实例卡片：「7栋-1203」「8栋-1501」
-
-### Page 6 — 删除实例与模板
-
-- **标题:** 「删除与管理」
-- **说明文字:**
-  - 「左滑实例卡片可删除。删除父实例会同时删除其下所有子实例。」
-  - 「删除模板则会删除该模板下的全部数据，请谨慎操作。」
-- **示意组件:**
-  - 一个模拟卡片，左侧有红色背景 + 删除图标，表示滑动删除
-  - 下方小字注释说明级联删除
-
-### Page 7 — 完成
-
-- **标题:** 「开始记录吧」
-- **说明文字:** 「你已经了解了 House Note 的核心功能。快去创建你的第一个模板吧！」
-- **示意组件:** 一个大的勾选图标（`Icons.check_circle`）
-- **底部按钮:** 「完成」（高亮主按钮）
-
----
-
-## 6. 组件设计
-
-### 6.1 TutorialScreen
-
-```dart
-class TutorialScreen extends StatefulWidget {
-  const TutorialScreen({super.key});
-
-  @override
-  State<TutorialScreen> createState() => _TutorialScreenState();
-}
-
-class _TutorialScreenState extends State<TutorialScreen> {
-  final PageController _controller = PageController();
-  int _currentPage = 0;
-  static const _pageCount = 7;
-
-  // ... build, dispose, onPageChanged, skip, finish
-}
-```
-
-### 6.2 TutorialPage 基类
-
-每个页面继承一个统一的布局结构：
-
-```dart
-class TutorialPage extends StatelessWidget {
+class TutorialStep {
+  final String id;
   final String title;
   final String description;
-  final Widget illustration;
+  final String? actionHint;        // e.g., "👆 点击高亮区域继续"
+  final String targetGlobalKey;    // key to locate target widget
+  final TutorialActionType actionType;
+  final String? expectedRoute;     // for navigation steps
+  final String? defaultInput;      // pre-filled text for type steps
+  final bool requiresUserAction;   // false = auto-advance after delay
+}
 
-  const TutorialPage({
-    required this.title,
-    required this.description,
-    required this.illustration,
-  });
-
-  // 统一布局：顶部标题 + 中部示意图 + 底部说明文字
+enum TutorialActionType {
+  tap,        // user taps target
+  type,       // user types into target
+  swipe,      // user swipes target
+  observe,    // just read, tap "下一步" to continue
+  navigate,   // system navigates, user observes
 }
 ```
 
-### 6.3 示意组件（Mock Widgets）
+---
 
-为保持可维护性，所有示意界面使用轻量级的自定义 Widget 构建，不依赖真实业务组件：
+## 3. UI/Overlay Design
 
-- `MockTemplateEditor` — 模拟模板编辑器的静态展示
-- `MockInstanceCard` — 模拟实例卡片的静态展示
-- `MockBreadcrumb` — 模拟面包屑导航
-- `MockSwipeCard` — 模拟滑动删除示意
-- `MockFlowDiagram` — 模拟模板引用流程图
+### 3.1 Spotlight Effect
 
-这些组件仅用于教程页面，内部使用 `Container`、`Card`、`Text`、`Icon` 等基础组件拼接，无业务逻辑。
+- **Background:** `Colors.black.withOpacity(0.75)`
+- **Cutout:** Rounded rectangle (`RRect` with `Radius.circular(12)`) matching the target widget's bounds.
+- **Border glow:** `Colors.deepPurple.withOpacity(0.5)`, 2px stroke around the cutout.
+- **Positioning:** Computed from `targetKey.currentContext?.findRenderObject()` → `RenderBox.localToGlobal` → `size`.
+- **Animation:** Smooth tween between cutout positions (300ms, `Curves.easeInOut`).
+
+### 3.2 Tooltip Card
+
+- **Style:** `Card` with `elevation: 4`, `color: Colors.white`, `borderRadius: BorderRadius.circular(12)`.
+- **Position:** Near the cutout. Auto-flips to top if the target is in the bottom 40% of the screen.
+- **Content:**
+  - Title: Bold, `16px`, `Theme.of(context).colorScheme.primary`
+  - Description: `14px`, `Colors.black87`
+  - Action hint: `12px`, `Colors.grey`, prefixed with `Icons.touch_app`
+- **Arrow:** Small triangle pointing from the card toward the cutout center.
+
+### 3.3 Persistent Controls
+
+- **Top-right:** "退出教程" text button. Style: `Colors.white.withOpacity(0.8)`, subtle border.
+- **Bottom-center:** "下一步" `ElevatedButton` (shown only for `observe` steps).
+- **Progress indicator:** "Step 3 / 23" text below the tooltip card.
 
 ---
 
-## 7. 依赖
+## 4. Tutorial Step Sequence (23 Steps)
 
-新增 `pubspec.yaml` 依赖：
+| Step | Tab | Target | Type | Description | Default Input |
+|------|-----|--------|------|-------------|---------------|
+| 1 | — | Dialog | observe | "欢迎使用 House Note！是否需要新手指引？" → user taps "开始教程" | — |
+| 2 | 模板 | Screen | observe | "这里是模板管理页，你可以创建和管理看房维度模板。" | — |
+| 3 | 模板 | FAB | tap | "点击右下角按钮，创建你的第一个模板。" | — |
+| 4 | 模板编辑 | Name field | type | "输入模板名称。这里已经帮你填好了建议名称。" | "房子模板" |
+| 5 | 模板编辑 | "添加维度项" | tap | "点击添加维度项，比如记录房子的朝向、楼层等信息。" | — |
+| 6 | 模板编辑 | Dialog fields | type/select | "输入名称「朝向」，选择类型「单选」，添加选项：东、南、西、北，然后保存。" | "朝向" |
+| 7 | 模板编辑 | "添加维度项" | tap | "继续添加「楼层」（数字类型）和「户型」（文本类型）。" | — |
+| 8 | 模板编辑 | Visibility icon | tap | "点击眼睛图标，设置缩略图显示字段。这些字段会显示在实例卡片上，方便对比。" | — |
+| 9 | 模板编辑 | Save icon | tap | "点击右上角保存模板。" | — |
+| 10 | 模板 | FAB | tap | "再创建一个小区模板，并在其中引用房子模板，建立层级关系。" | — |
+| 11 | 模板编辑 | Various | type/select | "创建「小区模板」，添加「小区名」「位置」，再添加「引用子模板」维度，选择引用「房子模板」。" | "小区模板" |
+| 12 | 首页 | Screen | observe | "切换到首页，这里按层级展示你创建的看房实例。" | — |
+| 13 | 首页 | FAB | tap | "点击创建第一个实例。选择「小区模板」。" | — |
+| 14 | 实例编辑 | Name field | type | "输入小区名称，比如「华润二十四城」，填入位置和通勤信息，然后保存。" | "华润二十四城" |
+| 15 | 首页 | Instance card | tap | "点击实例卡片进入下一层。现在你可以在小区下创建房子实例了。" | — |
+| 16 | 首页 | FAB | tap | "点击创建子实例，选择「房子模板」，输入「7栋-1203」，填写朝向和楼层，保存。" | "7栋-1203" |
+| 17 | 首页 | Instance card | swipe | "向左滑动实例卡片可以删除实例。" | — |
+| 18 | 首页 | Dialog | tap | "确认删除「7栋-1203」。因为这个实例下没有子实例，所以直接删除。" | — |
+| 19 | 首页 | FAB | tap | "我们再快速创建一个子实例，用来演示父实例的级联删除。" | "8栋-1502" |
+| 20 | 首页 | Breadcrumb | tap | "点击面包屑导航的「全部」，回到上一层。" | — |
+| 21 | 首页 | Instance card | swipe | "向左滑动删除父实例。系统会提示将同时删除其下的子实例。" | — |
+| 22 | 首页 | Dialog | tap | "确认删除。可以看到提示「将同时删除 1 个子实例」，这就是级联删除。" | — |
+| 23 | 设置 | Button | observe | "教程完成！以后可以在「设置」→「查看教程」随时重新学习。" | — |
 
-```yaml
-dependencies:
-  shared_preferences: ^2.5.0
+### Step Notes
+
+- **Step 1 (Welcome):** Not part of the overlay. A simple `AlertDialog` shown by `main.dart` before `TutorialOverlay` is activated.
+- **Step 6 (Dimension dialog):** The overlay pauses while the dialog is open. It resumes when the dialog closes and the new dimension appears in the list.
+- **Step 19 (Quick child):** Minimal input — only name is required. The tutorial pre-fills "8栋-1502" and the user just taps save. If the template has required dimensions, the tutorial should either pre-fill them with defaults or skip validation during tutorial mode.
+- **Step 23 (Settings):** The overlay navigates to the Settings tab and highlights the "查看教程" button.
+
+---
+
+## 5. First-Run Detection
+
+### 5.1 Storage
+
+Use `shared_preferences` (already in `pubspec.yaml`):
+
+- **`has_seen_tutorial`** (`bool`): Whether the user has ever seen the welcome dialog. Set to `true` immediately after the welcome dialog is dismissed (whether by "开始教程" or "跳过").
+- **`tutorial_was_active`** (`bool`): Whether a tutorial session is currently in progress. Set to `true` when `startTutorial()` is called, `false` on completion or exit.
+- **`tutorial_last_step`** (`int`): The last completed step index. Updated after each step transition. Used for crash recovery resume.
+
+### 5.2 Startup Logic
+
+```dart
+// In main.dart, before runApp
+final prefs = await SharedPreferences.getInstance();
+final hasSeen = prefs.getBool('has_seen_tutorial') ?? false;
+final wasActive = prefs.getBool('tutorial_was_active') ?? false;
+
+if (wasActive) {
+  // Show recovery dialog
+  final lastStep = prefs.getInt('tutorial_last_step') ?? 0;
+  showTutorialRecoveryDialog(resumeStep: lastStep);
+} else if (!hasSeen) {
+  // Show welcome dialog
+  showWelcomeDialog();
+}
 ```
 
+### 5.3 Recovery Dialog
+
+If `tutorial_was_active` is true on startup, show a dialog using the stored `tutorial_last_step`:
+
+> "上次教程未结束，是否继续？"
+> - "继续教程" → Resume from `tutorial_last_step + 1`
+> - "重新开始" → Reset and start from step 2 (skipping welcome)
+> - "退出并清理" → Delete tutorial data by timestamp, clear flags, skip
+
 ---
 
-## 8. 测试策略
+## 6. Settings Integration
 
-### 8.1 单元测试
+A new **"查看教程"** list tile is added to the Settings screen, below the "关于" section:
 
-**SettingsCubit 测试：**
-- `load()` 从 mock `SharedPreferences` 正确读取 `tutorial_seen` 和 `lan_sync_enabled`。
-- `markTutorialSeen()` 向 prefs 写入 `true` 并发射 `tutorialSeen: true`。
-- `toggleLanSync()` 保持原有行为不变。
+```dart
+ListTile(
+  leading: const Icon(Icons.school),
+  title: const Text('查看教程'),
+  subtitle: const Text('重新运行新手指引'),
+  onTap: () => _showRestartConfirmation(context),
+)
+```
 
-使用 `mocktail` 创建 `MockSharedPreferences`。
+**Restart flow:**
+1. Confirmation dialog: "重新开始教程？教程中创建的数据可以在退出时删除。"
+2. If confirmed: `prefs.setBool('has_seen_tutorial', true)` (prevents welcome dialog), then `TutorialCubit.startTutorial()`.
+3. Tutorial starts from step 2 (skipping the welcome prompt).
 
-### 8.2 Widget 测试
+**Disabled during active tutorial:** The button is hidden or disabled when `TutorialState.isActive` is true.
 
-**首次启动对话框测试：**
-- Pump `HouseNoteApp` 且 `tutorialSeen: false` → 验证欢迎对话框出现。
-- 点击「跳过」→ 对话框消失，`markTutorialSeen` 被调用。
-- 点击「查看教程」→ 导航到 `TutorialScreen`。
+---
 
-**TutorialScreen 测试：**
-- Pump `TutorialScreen`。
-- 滑动/点击浏览全部 7 页，验证每页的标题和说明文字。
-- 验证页面指示器 dots 随页码同步更新。
-- 验证末页的「完成」按钮和 AppBar 的「跳过」按钮均能退出页面。
+## 7. Cleanup Mechanism
 
-### 8.3 E2E 测试
+### 7.1 Timestamp-Based Cleanup
 
-在 `integration_test/e2e_test.dart` 中新增 story：
+When the user exits and chooses "删除教程数据":
+
+```sql
+DELETE FROM templates WHERE created_at >= ?;
+DELETE FROM instances WHERE created_at >= ?;
+-- TemplateDimensions, InstanceValues, etc. cascade via FK
+```
+
+The `startTimestamp` is recorded in `TutorialCubit.startTutorial()`.
+
+### 7.2 ID Tracking (Fallback)
+
+The cubit also maintains:
+- `Set<String> createdTemplateIds`
+- `Set<String> createdInstanceIds`
+
+These are populated by observing the app's state after creation steps. If timestamp cleanup fails or is imprecise, ID-based cleanup is used as a fallback.
+
+### 7.3 Exit Dialog
+
+When the user taps "退出教程":
+
+> "确定要退出教程吗？"
+> - "退出并删除数据" → Run cleanup, end tutorial
+> - "退出并保留数据" → End tutorial without cleanup
+> - "取消" → Resume tutorial
+
+---
+
+## 8. GlobalKeys Required
+
+The following widgets need `GlobalKey` assignments for the tutorial to target them:
+
+| Widget | Key Name | Used In Steps |
+|--------|----------|---------------|
+| TemplateList FAB | `templateListFabKey` | 3, 10 |
+| InstanceList FAB | `instanceListFabKey` | 13, 16, 19 |
+| Template name field | `templateNameFieldKey` | 4 |
+| "添加维度项" button | `addDimensionButtonKey` | 5, 7 |
+| Save icon (template) | `templateSaveButtonKey` | 9 |
+| Save icon (instance) | `instanceSaveButtonKey` | 14 |
+| Breadcrumb "全部" | `breadcrumbRootKey` | 20 |
+| Settings "查看教程" button | `settingsTutorialButtonKey` | 23 |
+
+For list items (instance cards, visibility icons), dynamic keys are generated:
+- `instanceCardKey(instanceId)`
+- `visibilityIconKey(dimensionId)`
+
+---
+
+## 9. Error Handling
+
+| Scenario | Behavior |
+|----------|----------|
+| **Target widget not found** | Overlay shows a "定位中..." spinner for up to 3 seconds. If still not found, displays: "请按教程指引操作" with a "重试" button. |
+| **User navigates unexpectedly** | Tutorial pauses. Overlay dims the full screen with a message: "请返回上一步继续教程" and a "返回" button that pops navigation back to the expected route. |
+| **Template/instance save fails** | Tutorial detects the error via `ScaffoldMessenger` snackbar. Shows an error tooltip: "保存失败，请重试" with "重试" and "跳过此步" buttons. |
+| **App crashes during tutorial** | On next launch, the recovery dialog (Section 5.3) is shown. |
+| **User skips first-run dialog** | `has_seen_tutorial = true` is set. Welcome dialog never shows again. Tutorial can only be started from Settings. |
+
+---
+
+## 10. Testing
+
+### 10.1 Unit Tests (`test/blocs/tutorial/cubit_test.dart`)
+
+- `startTutorial` → `isActive = true`, timestamp recorded
+- `nextStep` → `currentStepIndex` increments
+- `completeTutorial` → `isActive = false`, prefs updated
+- `exitAndCleanup` → calls repo delete with correct timestamp
+- `exitWithoutCleanup` → `isActive = false`, no deletion
+
+### 10.2 Widget Tests (`test/widgets/tutorial_overlay_test.dart`)
+
+- Spotlight renders at target widget's bounds
+- Tooltip auto-positions above target when target is in bottom half
+- "退出教程" button is always visible during active tutorial
+- "下一步" button only appears for `observe` steps
+
+### 10.3 E2E Test (`integration_test/e2e_test.dart`)
+
+Add a new test group:
 
 ```gherkin
-Story: 首次使用教程
-Given 用户首次安装并启动 App
-When 应用加载完成
-Then 弹出欢迎对话框「是否查看快速入门教程」
-When 用户点击「查看教程」
-Then 进入教程页面，显示「欢迎来到 House Note」
-When 用户滑动浏览全部 7 页教程
-And 点击「完成」
-Then 返回首页
-And 再次启动 App 时不再显示教程对话框
+Scenario: First-run tutorial flow
+Given 应用首次启动（has_seen_tutorial = false）
+When 用户看到欢迎弹窗并点击「开始教程」
+Then 教程覆盖层出现，第 2 步高亮「模板」页面
+When 用户按教程完成全部 23 步
+Then 设置页面中显示「查看教程」按钮
+When 用户退出教程并选择「删除数据」
+Then 模板列表和实例列表均为空
 ```
 
 ---
 
-## 9. 文件变更清单
+## 11. Files to Create / Modify
 
-| 操作 | 文件路径 | 说明 |
-|------|----------|------|
-| 修改 | `pubspec.yaml` | 添加 `shared_preferences` 依赖 |
-| 修改 | `lib/main.dart` | 初始化 `SharedPreferences` 并传入 `HouseNoteApp` |
-| 修改 | `lib/app.dart` | 新增 `/tutorial` 路由，注入 `SettingsCubit` |
-| 修改 | `lib/blocs/settings/state.dart` | 新增 `tutorialSeen` 字段 |
-| 修改 | `lib/blocs/settings/cubit.dart` | 新增 `SharedPreferences` 依赖和 `markTutorialSeen()` |
-| 修改 | `lib/screens/settings_screen.dart` | 新增「查看教程」入口按钮 |
-| 新增 | `lib/screens/tutorial_screen.dart` | 教程主页面 |
-| 新增 | `lib/widgets/tutorial_page.dart` | 教程页面统一布局组件 |
-| 新增 | `lib/widgets/mock_*.dart` | 各示意组件（约 4–5 个） |
-| 修改 | `test/blocs/settings_cubit_test.dart` | 补充 tutorial 相关单元测试 |
-| 新增 | `test/screens/tutorial_screen_test.dart` | 教程页面 Widget 测试 |
-| 修改 | `integration_test/e2e_test.dart` | 新增首次教程 E2E 测试 |
+### New Files
+
+| Path | Purpose |
+|------|---------|
+| `lib/blocs/tutorial/cubit.dart` | TutorialCubit |
+| `lib/blocs/tutorial/state.dart` | TutorialState |
+| `lib/widgets/tutorial_overlay.dart` | TutorialOverlay widget |
+| `lib/widgets/tutorial_spotlight_painter.dart` | CustomPainter for spotlight |
+| `lib/models/tutorial_step.dart` | TutorialStep model |
+| `lib/utils/tutorial_steps.dart` | Step definitions (23 steps) |
+| `test/blocs/tutorial/cubit_test.dart` | Cubit unit tests |
+| `test/widgets/tutorial_overlay_test.dart` | Overlay widget tests |
+
+### Modified Files
+
+| Path | Changes |
+|------|---------|
+| `lib/main.dart` | Check `has_seen_tutorial` on startup, show welcome dialog |
+| `lib/app.dart` | Wrap `_MainShell` with `TutorialOverlay`, add GlobalKeys |
+| `lib/screens/settings_screen.dart` | Add "查看教程" button |
+| `lib/screens/template_list_screen.dart` | Add `GlobalKey` to FAB |
+| `lib/screens/instance_list_screen.dart` | Add `GlobalKey` to FAB, cards, breadcrumb |
+| `lib/screens/template_editor_screen.dart` | Add `GlobalKey` to name field, add-dim button, save icon |
+| `lib/screens/instance_editor_screen.dart` | Add `GlobalKey` to save icon |
+| `lib/widgets/dimension_tree.dart` | Add `GlobalKey` to visibility icons |
+| `integration_test/e2e_test.dart` | Add tutorial E2E test |
 
 ---
 
-## 10. 范围边界
+## 12. Open Questions (Resolved)
 
-**包含:**
-- 首次启动询问对话框
-- 7 页滑动教程（创建/编辑模板、子模板引用、缩略图设置、创建实例、删除管理、完成）
-- 设置页「查看教程」入口
-- `tutorialSeen` 持久化到 `SharedPreferences`
-- 完整的单元测试、Widget 测试、E2E 测试
-
-**不包含:**
-- 示例数据预创建（用户教程结束后直接进入空白首页）
-- 交互式实时引导（如高亮真实 UI 元素的 coach marks）
-- 多语言支持（教程文字为中文，与 App 现有语言一致）
-- 教程页面动画过渡效果（保持简单，仅基础滑动）
+| Question | Decision |
+|----------|----------|
+| Tutorial format | Interactive overlay with spotlights on real UI (Approach 1) |
+| Hands-on vs. observation | Hands-on — user creates real data |
+| First-run skip behavior | Ask once only; Settings is the only way back |
+| Input style | Suggested names pre-filled, user can override |
+| Exit behavior | Exit anytime, with optional cleanup of tutorial-created data |
+| Deletion steps | Added steps 17–22: simple child deletion + cascade parent deletion |
